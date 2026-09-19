@@ -27,7 +27,14 @@ final class DependencyContainer {
         clipboardState.items = localStore.fetchItems()
         clipboardState.boards = localStore.fetchBoards()
         clipboardMonitor.onItemsChanged = { [weak self] items in
-            Task { @MainActor in self?.clipboardState.items = items }
+            Task { @MainActor in
+                guard let self else { return }
+                if let boardID = self.clipboardState.selectedBoardID {
+                    self.clipboardState.items = self.localStore.fetchItems(boardID: boardID)
+                } else {
+                    self.clipboardState.items = items
+                }
+            }
         }
         clipboardMonitor.start()
         shortcutManager.registerDefaultShortcut { [weak self] in

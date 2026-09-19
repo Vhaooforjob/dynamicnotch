@@ -45,11 +45,33 @@ final class ClipboardLocalStore {
         pasteboard.setString(plainText, forType: .string)
     }
 
-    func fetchItems(limit: Int = 200) -> [ClipboardItem] {
-        let sql = "SELECT id, type, plain_text, source_application, source_bundle_identifier, created_at, updated_at, is_favorite, content_hash FROM clipboard_items ORDER BY created_at DESC LIMIT ?;"
+    func fetchItems(limit: Int = 200, boardID: UUID? = nil) -> [ClipboardItem] {
+        let sql: String
+        if boardID == nil {
+            sql = """
+            SELECT id, type, plain_text, source_application, source_bundle_identifier, created_at, updated_at, is_favorite, content_hash
+            FROM clipboard_items
+            ORDER BY created_at DESC
+            LIMIT ?;
+            """
+        } else {
+            sql = """
+            SELECT clipboard_items.id, type, plain_text, source_application, source_bundle_identifier, created_at, updated_at, is_favorite, content_hash
+            FROM clipboard_items
+            INNER JOIN board_items ON board_items.clipboard_item_id = clipboard_items.id
+            WHERE board_items.board_id = ?
+            ORDER BY board_items.sort_order ASC, clipboard_items.created_at DESC
+            LIMIT ?;
+            """
+        }
         var statement: OpaquePointer?
         sqlite3_prepare_v2(database, sql, -1, &statement, nil)
-        sqlite3_bind_int(statement, 1, Int32(limit))
+        if let boardID {
+            bind(statement, 1, boardID.uuidString)
+            sqlite3_bind_int(statement, 2, Int32(limit))
+        } else {
+            sqlite3_bind_int(statement, 1, Int32(limit))
+        }
         var items: [ClipboardItem] = []
         while sqlite3_step(statement) == SQLITE_ROW {
             guard

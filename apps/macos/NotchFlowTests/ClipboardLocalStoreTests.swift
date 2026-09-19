@@ -18,6 +18,19 @@ final class ClipboardLocalStoreTests: XCTestCase {
         XCTAssertEqual(store.fetchBoards().map(\.name), ["Design", "Development"])
     }
 
+    func testFetchItemsCanFilterByBoard() {
+        let store = makeStore()
+        let board = store.createBoard(named: "Design")
+        let designItem = makeItem("palette", createdAt: Date())
+        let otherItem = makeItem("invoice", createdAt: Date())
+        store.insertIfNeeded(designItem)
+        store.insertIfNeeded(otherItem)
+        store.addItem(designItem, to: board)
+
+        XCTAssertEqual(store.fetchItems(boardID: board.id).map(\.plainText), ["palette"])
+        XCTAssertEqual(store.fetchItems().count, 2)
+    }
+
     func testRetentionPrunesOldAndOverflowItems() {
         let store = makeStore()
         let old = Calendar.current.date(byAdding: .hour, value: -48, to: Date()) ?? Date()

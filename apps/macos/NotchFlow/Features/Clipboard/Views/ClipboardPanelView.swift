@@ -22,12 +22,27 @@ struct ClipboardPanelView: View {
                 .font(NFTypography.caption)
             }
             HStack(spacing: NFSpacing.sm) {
+                Button {
+                    state.selectedBoardID = nil
+                    state.items = localStore.fetchItems()
+                } label: {
+                    NFPill(title: "All", isSelected: state.selectedBoardID == nil)
+                }
+                .buttonStyle(.plain)
                 ForEach(state.boards) { board in
-                    NFPill(title: board.name, isSelected: false)
+                    Button {
+                        state.selectedBoardID = board.id
+                        state.items = localStore.fetchItems(boardID: board.id)
+                    } label: {
+                        NFPill(title: board.name, isSelected: state.selectedBoardID == board.id)
+                    }
+                    .buttonStyle(.plain)
                 }
                 Button {
-                    _ = localStore.createBoard(named: defaultBoardName())
+                    let board = localStore.createBoard(named: defaultBoardName())
                     state.boards = localStore.fetchBoards()
+                    state.selectedBoardID = board.id
+                    state.items = localStore.fetchItems(boardID: board.id)
                 } label: {
                     Image(systemName: "plus.circle")
                 }
@@ -50,9 +65,12 @@ struct ClipboardPanelView: View {
                                     Button("clipboard.copy") {
                                         ClipboardLocalStore.copyToPasteboard(item)
                                     }
-                                    if let board = state.boards.first {
+                                    if let board = state.selectedBoard ?? state.boards.first {
                                         Button("clipboard.addToBoard") {
                                             localStore.addItem(item, to: board)
+                                            if state.selectedBoardID == board.id {
+                                                state.items = localStore.fetchItems(boardID: board.id)
+                                            }
                                         }
                                     }
                                 }

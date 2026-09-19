@@ -6,9 +6,15 @@ final class ClipboardState: ObservableObject {
     @Published var boards: [Board] = []
     @Published var query = ""
     @Published var selectedType: ClipboardItemType?
+    @Published var selectedBoardID: UUID?
 
     var filteredItems: [ClipboardItem] {
         ClipboardSearchEngine.filter(items: items, query: query, selectedType: selectedType)
+    }
+
+    var selectedBoard: Board? {
+        guard let selectedBoardID else { return nil }
+        return boards.first { $0.id == selectedBoardID }
     }
 }
 
