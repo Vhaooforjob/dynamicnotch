@@ -6,12 +6,19 @@ final class NotchWindowController: NSObject {
     private let notchState: NotchState
     private let clipboardState: ClipboardState
     private let copyStackState: CopyStackState
+    private let localStore: ClipboardLocalStore
     private var panel: NSPanel?
 
-    init(notchState: NotchState, clipboardState: ClipboardState, copyStackState: CopyStackState) {
+    init(
+        notchState: NotchState,
+        clipboardState: ClipboardState,
+        copyStackState: CopyStackState,
+        localStore: ClipboardLocalStore
+    ) {
         self.notchState = notchState
         self.clipboardState = clipboardState
         self.copyStackState = copyStackState
+        self.localStore = localStore
     }
 
     func show() {
@@ -29,7 +36,12 @@ final class NotchWindowController: NSObject {
     }
 
     private func makePanel() -> NSPanel {
-        let view = NotchRootView(notchState: notchState, clipboardState: clipboardState, copyStackState: copyStackState)
+        let view = NotchRootView(
+            notchState: notchState,
+            clipboardState: clipboardState,
+            copyStackState: copyStackState,
+            localStore: localStore
+        )
         let panel = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: NFLayout.compactWidth, height: NFLayout.compactHeight),
             styleMask: [.borderless, .nonactivatingPanel],

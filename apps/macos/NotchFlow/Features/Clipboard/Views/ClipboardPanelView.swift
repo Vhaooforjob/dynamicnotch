@@ -3,6 +3,7 @@ import SwiftUI
 struct ClipboardPanelView: View {
     @ObservedObject var state: ClipboardState
     @ObservedObject var copyStackState: CopyStackState
+    let localStore: ClipboardLocalStore
 
     var body: some View {
         VStack(spacing: NFSpacing.md) {
@@ -20,6 +21,20 @@ struct ClipboardPanelView: View {
                 .toggleStyle(.switch)
                 .font(NFTypography.caption)
             }
+            HStack(spacing: NFSpacing.sm) {
+                ForEach(state.boards) { board in
+                    NFPill(title: board.name, isSelected: false)
+                }
+                Button {
+                    _ = localStore.createBoard(named: defaultBoardName())
+                    state.boards = localStore.fetchBoards()
+                } label: {
+                    Image(systemName: "plus.circle")
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("clipboard.newBoard")
+                Spacer()
+            }
             ScrollView {
                 LazyVStack(spacing: NFSpacing.sm) {
                     if state.filteredItems.isEmpty {
@@ -31,6 +46,16 @@ struct ClipboardPanelView: View {
                     } else {
                         ForEach(state.filteredItems) { item in
                             ClipboardRow(item: item)
+                                .contextMenu {
+                                    Button("clipboard.copy") {
+                                        ClipboardLocalStore.copyToPasteboard(item)
+                                    }
+                                    if let board = state.boards.first {
+                                        Button("clipboard.addToBoard") {
+                                            localStore.addItem(item, to: board)
+                                        }
+                                    }
+                                }
                         }
                     }
                 }
@@ -45,6 +70,10 @@ struct ClipboardPanelView: View {
             NFPill(title: title, isSelected: state.selectedType == type)
         }
         .buttonStyle(.plain)
+    }
+
+    private func defaultBoardName() -> String {
+        "Board \(state.boards.count + 1)"
     }
 }
 

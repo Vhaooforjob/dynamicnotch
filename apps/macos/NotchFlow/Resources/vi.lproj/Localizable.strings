@@ -1,5 +1,8 @@
 "clipboard.search" = "Tìm clipboard...";
 "clipboard.empty" = "Hãy sao chép nội dung để bắt đầu lịch sử cục bộ.";
+"clipboard.copy" = "Sao chép";
+"clipboard.addToBoard" = "Thêm vào board đầu tiên";
+"clipboard.newBoard" = "Board mới";
 "settings.general" = "Chung";
 "settings.clipboard" = "Clipboard";
 "settings.sync" = "Đồng bộ";

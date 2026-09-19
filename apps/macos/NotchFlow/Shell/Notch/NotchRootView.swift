@@ -4,11 +4,12 @@ struct NotchRootView: View {
     @ObservedObject var notchState: NotchState
     @ObservedObject var clipboardState: ClipboardState
     @ObservedObject var copyStackState: CopyStackState
+    let localStore: ClipboardLocalStore
 
     var body: some View {
         VStack(spacing: 0) {
             if notchState.presentation == .expanded {
-                ExpandedNotchView(clipboardState: clipboardState, copyStackState: copyStackState)
+                ExpandedNotchView(clipboardState: clipboardState, copyStackState: copyStackState, localStore: localStore)
             } else {
                 CompactNotchView(count: clipboardState.items.count)
             }
@@ -52,6 +53,7 @@ private struct CompactNotchView: View {
 private struct ExpandedNotchView: View {
     @ObservedObject var clipboardState: ClipboardState
     @ObservedObject var copyStackState: CopyStackState
+    let localStore: ClipboardLocalStore
 
     var body: some View {
         VStack(spacing: NFSpacing.md) {
@@ -67,7 +69,7 @@ private struct ExpandedNotchView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Open Settings")
             }
-            ClipboardPanelView(state: clipboardState, copyStackState: copyStackState)
+            ClipboardPanelView(state: clipboardState, copyStackState: copyStackState, localStore: localStore)
         }
         .padding(NFSpacing.lg)
         .frame(width: NFLayout.expandedWidth, height: NFLayout.expandedHeight)

@@ -1,5 +1,8 @@
 "clipboard.search" = "Search clipboard...";
 "clipboard.empty" = "Copy something to start building local history.";
+"clipboard.copy" = "Copy";
+"clipboard.addToBoard" = "Add to first board";
+"clipboard.newBoard" = "New board";
 "settings.general" = "General";
 "settings.clipboard" = "Clipboard";
 "settings.sync" = "Sync";

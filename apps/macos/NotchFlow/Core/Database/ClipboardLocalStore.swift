@@ -1,12 +1,15 @@
+import AppKit
 import CryptoKit
 import Foundation
 import SQLite3
 
 final class ClipboardLocalStore {
     private var database: OpaquePointer?
+    private let databaseURL: URL
 
-    init() {
-        open()
+    init(databaseURL: URL? = nil) {
+        self.databaseURL = databaseURL ?? Self.defaultDatabaseURL()
+        open(at: self.databaseURL)
         migrate()
     }
 
@@ -33,6 +36,13 @@ final class ClipboardLocalStore {
         bind(statement, 9, item.contentHash)
         sqlite3_step(statement)
         sqlite3_finalize(statement)
+    }
+
+    static func copyToPasteboard(_ item: ClipboardItem) {
+        guard let plainText = item.plainText else { return }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(plainText, forType: .string)
     }
 
     func fetchItems(limit: Int = 200) -> [ClipboardItem] {
@@ -74,15 +84,100 @@ final class ClipboardLocalStore {
         return items
     }
 
+    func createBoard(named name: String) -> Board {
+        let now = Date()
+        let board = Board(id: UUID(), name: name, sortOrder: nextBoardSortOrder(), createdAt: now, updatedAt: now)
+        let sql = "INSERT INTO boards(id, name, sort_order, created_at, updated_at) VALUES(?, ?, ?, ?, ?);"
+        var statement: OpaquePointer?
+        sqlite3_prepare_v2(database, sql, -1, &statement, nil)
+        bind(statement, 1, board.id.uuidString)
+        bind(statement, 2, board.name)
+        sqlite3_bind_int(statement, 3, Int32(board.sortOrder))
+        bind(statement, 4, Self.format(board.createdAt))
+        bind(statement, 5, Self.format(board.updatedAt))
+        sqlite3_step(statement)
+        sqlite3_finalize(statement)
+        return board
+    }
+
+    func fetchBoards() -> [Board] {
+        let sql = "SELECT id, name, sort_order, created_at, updated_at FROM boards ORDER BY sort_order ASC;"
+        var statement: OpaquePointer?
+        sqlite3_prepare_v2(database, sql, -1, &statement, nil)
+        var boards: [Board] = []
+        while sqlite3_step(statement) == SQLITE_ROW {
+            guard
+                let idText = columnText(statement, 0),
+                let id = UUID(uuidString: idText),
+                let name = columnText(statement, 1),
+                let createdText = columnText(statement, 3),
+                let createdAt = Self.date(from: createdText),
+                let updatedText = columnText(statement, 4),
+                let updatedAt = Self.date(from: updatedText)
+            else { continue }
+            boards.append(Board(
+                id: id,
+                name: name,
+                sortOrder: Int(sqlite3_column_int(statement, 2)),
+                createdAt: createdAt,
+                updatedAt: updatedAt
+            ))
+        }
+        sqlite3_finalize(statement)
+        return boards
+    }
+
+    func addItem(_ item: ClipboardItem, to board: Board) {
+        let sql = "INSERT OR REPLACE INTO board_items(board_id, clipboard_item_id, sort_order) VALUES(?, ?, ?);"
+        var statement: OpaquePointer?
+        sqlite3_prepare_v2(database, sql, -1, &statement, nil)
+        bind(statement, 1, board.id.uuidString)
+        bind(statement, 2, item.id.uuidString)
+        sqlite3_bind_int(statement, 3, Int32(nextBoardItemSortOrder(boardID: board.id)))
+        sqlite3_step(statement)
+        sqlite3_finalize(statement)
+    }
+
+    func prune(using policy: RetentionPolicy) {
+        if let maxAgeHours = policy.maxAgeHours {
+            let cutoff = Calendar.current.date(byAdding: .hour, value: -maxAgeHours, to: Date()) ?? Date()
+            var statement: OpaquePointer?
+            sqlite3_prepare_v2(database, "DELETE FROM clipboard_items WHERE is_favorite = 0 AND created_at < ?;", -1, &statement, nil)
+            bind(statement, 1, Self.format(cutoff))
+            sqlite3_step(statement)
+            sqlite3_finalize(statement)
+        }
+
+        let sql = """
+        DELETE FROM clipboard_items
+        WHERE id IN (
+          SELECT id FROM clipboard_items
+          WHERE is_favorite = 0
+          ORDER BY created_at DESC
+          LIMIT -1 OFFSET ?
+        );
+        """
+        var statement: OpaquePointer?
+        sqlite3_prepare_v2(database, sql, -1, &statement, nil)
+        sqlite3_bind_int(statement, 1, Int32(policy.maxItems))
+        sqlite3_step(statement)
+        sqlite3_finalize(statement)
+    }
+
     static func hash(_ text: String) -> String {
         SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined()
     }
 
-    private func open() {
+    private static func defaultDatabaseURL() -> URL {
         let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("NotchFlow/database", isDirectory: true)
+        return directory.appendingPathComponent("notchflow.sqlite")
+    }
+
+    private func open(at url: URL) {
+        let directory = url.deletingLastPathComponent()
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        sqlite3_open(directory.appendingPathComponent("notchflow.sqlite").path, &database)
+        sqlite3_open(url.path, &database)
     }
 
     private func migrate() {
@@ -122,6 +217,25 @@ final class ClipboardLocalStore {
         bind(statement, 1, hash)
         defer { sqlite3_finalize(statement) }
         return sqlite3_step(statement) == SQLITE_ROW ? columnText(statement, 0) : nil
+    }
+
+    private func nextBoardSortOrder() -> Int {
+        scalarInt("SELECT COALESCE(MAX(sort_order), -1) + 1 FROM boards;")
+    }
+
+    private func nextBoardItemSortOrder(boardID: UUID) -> Int {
+        var statement: OpaquePointer?
+        sqlite3_prepare_v2(database, "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM board_items WHERE board_id = ?;", -1, &statement, nil)
+        bind(statement, 1, boardID.uuidString)
+        defer { sqlite3_finalize(statement) }
+        return sqlite3_step(statement) == SQLITE_ROW ? Int(sqlite3_column_int(statement, 0)) : 0
+    }
+
+    private func scalarInt(_ sql: String) -> Int {
+        var statement: OpaquePointer?
+        sqlite3_prepare_v2(database, sql, -1, &statement, nil)
+        defer { sqlite3_finalize(statement) }
+        return sqlite3_step(statement) == SQLITE_ROW ? Int(sqlite3_column_int(statement, 0)) : 0
     }
 
     private func bind(_ statement: OpaquePointer?, _ index: Int32, _ value: String?) {

@@ -48,6 +48,7 @@ final class ClipboardMonitorService {
             metadata: [:]
         )
         store.insertIfNeeded(item)
+        store.prune(using: .free)
         onItemsChanged?(store.fetchItems())
     }
 

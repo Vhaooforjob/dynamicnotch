@@ -3,6 +3,7 @@ import Foundation
 @MainActor
 final class ClipboardState: ObservableObject {
     @Published var items: [ClipboardItem] = []
+    @Published var boards: [Board] = []
     @Published var query = ""
     @Published var selectedType: ClipboardItemType?
 

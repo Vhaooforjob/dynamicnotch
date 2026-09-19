@@ -15,11 +15,17 @@ final class DependencyContainer {
     init() {
         localStore = ClipboardLocalStore()
         clipboardMonitor = ClipboardMonitorService(store: localStore)
-        notchController = NotchWindowController(notchState: notchState, clipboardState: clipboardState, copyStackState: copyStackState)
+        notchController = NotchWindowController(
+            notchState: notchState,
+            clipboardState: clipboardState,
+            copyStackState: copyStackState,
+            localStore: localStore
+        )
     }
 
     func start() {
         clipboardState.items = localStore.fetchItems()
+        clipboardState.boards = localStore.fetchBoards()
         clipboardMonitor.onItemsChanged = { [weak self] items in
             Task { @MainActor in self?.clipboardState.items = items }
         }
