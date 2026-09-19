@@ -1,0 +1,19 @@
+{
+  "name": "notchflow",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@12.4.2",
+  "scripts": {
+    "dev:api": "pnpm --filter @notchflow/api dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "db:generate": "pnpm --filter @notchflow/database db:generate",
+    "db:migrate": "pnpm --filter @notchflow/database db:migrate",
+    "db:studio": "pnpm --filter @notchflow/database db:studio"
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.2"
+  }
+}

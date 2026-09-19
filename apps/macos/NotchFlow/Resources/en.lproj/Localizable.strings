@@ -1,0 +1,11 @@
+"clipboard.search" = "Search clipboard...";
+"clipboard.empty" = "Copy something to start building local history.";
+"settings.general" = "General";
+"settings.clipboard" = "Clipboard";
+"settings.sync" = "Sync";
+"settings.privacy" = "Privacy";
+"settings.launchAtLogin" = "Launch at login";
+"settings.pauseClipboard" = "Pause clipboard monitoring";
+"settings.clearClipboard" = "Clear clipboard history";
+"settings.cloudSync" = "Cloud sync";
+"settings.privacyBody" = "Clipboard contents stay on this Mac unless you explicitly enable sync.";
