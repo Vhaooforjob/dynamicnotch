@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { loadEnvFile } from "./loadEnv.js";
+
+loadEnvFile();
 
 const envSchema = z.object({
   APP_ENV: z.enum(["development", "test", "production"]).default("development"),
