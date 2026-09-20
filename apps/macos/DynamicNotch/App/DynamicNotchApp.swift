@@ -1,24 +1,13 @@
-import SwiftUI
+import AppKit
 
 @main
-struct DynamicNotchApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-
-    var body: some Scene {
-        Settings {
-            SettingsView(
-                state: appDelegate.container.settingsState,
-                onClearClipboard: appDelegate.container.clearClipboardHistory
-            )
-                .preferredColorScheme(appDelegate.container.settingsState.appearanceMode.colorScheme)
-                .frame(width: 760, height: 520)
-        }
-        .commands {
-            CommandGroup(replacing: .appSettings) {
-                SettingsLink {
-                    Text(appDelegate.container.settingsState.text("settingsShort"))
-                }
-            }
-        }
+enum DynamicNotchApp {
+    @MainActor
+    static func main() {
+        let application = NSApplication.shared
+        let delegate = AppDelegate()
+        application.delegate = delegate
+        application.run()
+        withExtendedLifetime(delegate) {}
     }
 }

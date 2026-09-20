@@ -128,8 +128,7 @@ private struct ExpandedNotchView: View {
                 VStack(spacing: NFSpacing.md) {
                     PanelToolbar(
                         title: settingsState.text("clipboard"),
-                        onBack: { onSelectPanel(.quickPanel) },
-                        settingsState: settingsState
+                        onBack: { onSelectPanel(.quickPanel) }
                     )
                     ClipboardPanelView(
                         state: clipboardState,
@@ -168,8 +167,7 @@ private struct QuickPanelView: View {
             QuickAction(id: "translate", title: settingsState.text("translate"), icon: "character.book.closed", color: NFTheme.accentBlue, destination: .panel(.capture), isEnabled: FeatureFlags.advancedTranslation),
             QuickAction(id: "search", title: settingsState.text("search"), icon: "magnifyingglass", color: NFTheme.accent, destination: .panel(.clipboard), isEnabled: true),
             QuickAction(id: "calendar", title: settingsState.text("calendar"), icon: "calendar", color: NFTheme.warning, destination: .panel(.calendar), isEnabled: false),
-            QuickAction(id: "media", title: settingsState.text("media"), icon: "music.note", color: NFTheme.success, destination: .panel(.media), isEnabled: FeatureFlags.lyrics),
-            QuickAction(id: "settings", title: settingsState.text("settingsShort"), icon: "gearshape", color: .primary, destination: .settings, isEnabled: true)
+            QuickAction(id: "media", title: settingsState.text("media"), icon: "music.note", color: NFTheme.success, destination: .panel(.media), isEnabled: FeatureFlags.lyrics)
         ]
     }
 
@@ -185,19 +183,8 @@ private struct QuickPanelView: View {
 
             HStack(spacing: NFSpacing.md) {
                 ForEach(actions) { action in
-                    if action.destination == .settings {
-                        SettingsLink {
-                            QuickActionTileContent(action: action)
-                                .contentShape(Rectangle())
-                                .opacity(action.isEnabled ? 1 : 0.55)
-                        }
-                        .buttonStyle(.plain)
-                        .focusable(false)
-                        .accessibilityLabel(settingsState.text("openSettings"))
-                    } else {
-                        QuickActionTile(action: action) {
-                            handle(action)
-                        }
+                    QuickActionTile(action: action) {
+                        handle(action)
                     }
                 }
             }
@@ -213,8 +200,6 @@ private struct QuickPanelView: View {
             withAnimation(NFAnimation.content) {
                 onSelectPanel(panel)
             }
-        case .settings:
-            break
         }
     }
 }
@@ -230,7 +215,6 @@ private struct QuickAction: Identifiable {
 
 private enum QuickActionDestination: Equatable {
     case panel(NotchPanel)
-    case settings
 }
 
 private struct QuickActionTile: View {
@@ -285,7 +269,6 @@ private struct QuickActionTileContent: View {
 private struct PanelToolbar: View {
     let title: String
     let onBack: () -> Void
-    @ObservedObject var settingsState: SettingsState
 
     var body: some View {
         HStack {
@@ -300,14 +283,6 @@ private struct PanelToolbar: View {
             .buttonStyle(.plain)
             .focusable(false)
             Spacer()
-            SettingsLink {
-                Image(systemName: "gearshape")
-                    .frame(width: 32, height: 32)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .focusable(false)
-            .accessibilityLabel(settingsState.text("openSettings"))
         }
     }
 }
@@ -319,7 +294,10 @@ private struct FuturePanelView: View {
 
     var body: some View {
         VStack(spacing: NFSpacing.md) {
-            PanelToolbar(title: title, onBack: onBack, settingsState: settingsState)
+            PanelToolbar(
+                title: title,
+                onBack: onBack
+            )
             Spacer()
             NFIconTile(systemName: icon, color: NFTheme.accent)
                 .scaleEffect(1.5)

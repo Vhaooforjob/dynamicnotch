@@ -276,6 +276,7 @@ final class NotchWindowController: NSObject {
 
 private final class TransparentHostingView<Content: View>: NSHostingView<Content> {
     override var isOpaque: Bool { false }
+    override var intrinsicContentSize: NSSize { .zero }
 }
 
 private final class InteractiveNotchPanel: NSPanel {

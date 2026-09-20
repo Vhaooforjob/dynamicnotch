@@ -109,7 +109,9 @@ enum AppStrings {
         "clearClipboardMessage": "This permanently removes local clipboard items from this Mac. Boards are kept.",
         "cloudSync": "Cloud sync",
         "privacyBody": "Clipboard contents stay on this Mac unless you explicitly enable sync.",
-        "openSettings": "Open Settings"
+        "openSettings": "Open Settings",
+        "openPanel": "Open DynamicNotch",
+        "quitApp": "Quit DynamicNotch"
     ]
 
     private static let vietnamese = [
@@ -195,6 +197,8 @@ enum AppStrings {
         "clearClipboardMessage": "Thao tác này xóa vĩnh viễn các mục clipboard cục bộ trên máy Mac này. Các board vẫn được giữ lại.",
         "cloudSync": "Đồng bộ đám mây",
         "privacyBody": "Nội dung clipboard ở lại trên máy Mac này trừ khi bạn bật đồng bộ.",
-        "openSettings": "Mở cài đặt"
+        "openSettings": "Mở cài đặt",
+        "openPanel": "Mở DynamicNotch",
+        "quitApp": "Thoát DynamicNotch"
     ]
 }

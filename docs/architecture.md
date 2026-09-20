@@ -11,6 +11,10 @@ DynamicNotch is a local-first native macOS application with an optional cloud AP
 
 The macOS client talks to the API over HTTPS and never connects directly to PostgreSQL.
 
+## macOS Lifecycle
+
+AppKit owns the application lifecycle, status item, notch panel, and Settings window. SwiftUI feature views are embedded with `NSHostingView`. Unit-test hosts skip application services and window creation so tests do not mutate local clipboard state or register system integrations.
+
 ## Local-First Rule
 
 Clipboard data, screenshots, OCR results, and sensitive content stay on-device by default. Sync abstractions must support local-only operation.
