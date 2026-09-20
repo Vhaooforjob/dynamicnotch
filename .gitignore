@@ -9,5 +9,5 @@ DerivedData/
 *.xcworkspace
 *.xcodeproj
 *.xcuserstate
-apps/macos/NotchFlow.xcodeproj/
-apps/macos/NotchFlow.xcworkspace/
+apps/macos/DynamicNotch.xcodeproj/
+apps/macos/DynamicNotch.xcworkspace/

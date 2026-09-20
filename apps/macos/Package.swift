@@ -2,16 +2,16 @@
 import PackageDescription
 
 let package = Package(
-    name: "NotchFlow",
+    name: "DynamicNotch",
     defaultLocalization: "en",
     platforms: [.macOS(.v15)],
     products: [
-        .executable(name: "NotchFlow", targets: ["NotchFlow"])
+        .executable(name: "DynamicNotch", targets: ["DynamicNotch"])
     ],
     targets: [
         .executableTarget(
-            name: "NotchFlow",
-            path: "NotchFlow",
+            name: "DynamicNotch",
+            path: "DynamicNotch",
             exclude: ["Resources/Info.plist"],
             resources: [
                 .process("Resources")
@@ -21,9 +21,9 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "NotchFlowTests",
-            dependencies: ["NotchFlow"],
-            path: "NotchFlowTests"
+            name: "DynamicNotchTests",
+            dependencies: ["DynamicNotch"],
+            path: "DynamicNotchTests"
         )
     ]
 )

@@ -1,36 +1,36 @@
-name: NotchFlow
+name: DynamicNotch
 options:
-  bundleIdPrefix: app.notchflow
+  bundleIdPrefix: app.dynamicnotch
   deploymentTarget:
     macOS: "15.0"
 settings:
   base:
     SWIFT_VERSION: "6.0"
 targets:
-  NotchFlow:
+  DynamicNotch:
     type: application
     platform: macOS
     sources:
-      - NotchFlow
+      - DynamicNotch
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.notchflow.NotchFlow
-        INFOPLIST_FILE: NotchFlow/Resources/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: app.dynamicnotch.DynamicNotch
+        INFOPLIST_FILE: DynamicNotch/Resources/Info.plist
         CODE_SIGN_STYLE: Automatic
     scheme:
       testTargets:
-        - NotchFlowTests
-  NotchFlowTests:
+        - DynamicNotchTests
+  DynamicNotchTests:
     type: bundle.unit-test
     platform: macOS
     sources:
-      - NotchFlowTests
+      - DynamicNotchTests
     dependencies:
-      - target: NotchFlow
-  NotchFlowUITests:
+      - target: DynamicNotch
+  DynamicNotchUITests:
     type: bundle.ui-testing
     platform: macOS
     sources:
-      - NotchFlowUITests
+      - DynamicNotchUITests
     dependencies:
-      - target: NotchFlow
+      - target: DynamicNotch
