@@ -184,7 +184,7 @@ importers:
       '@fastify/rate-limit':
         specifier: ^10.3.0
         version: 10.3.0
-      '@notchflow/contracts':
+      '@dynamicnotch/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       fastify:

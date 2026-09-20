@@ -20,7 +20,7 @@ Proceed incrementally until the project can be run locally.
 
 Temporary project codename:
 
-`NotchFlow`
+`DynamicNotch`
 
 The name must be easy to replace globally later.
 
@@ -184,7 +184,7 @@ Interfaces must not tightly couple UI to Neon.
 Create a monorepo approximately like this:
 
 ```text
-notchflow/
+dynamicnotch/
 │
 ├── AGENTS.md
 ├── README.md
@@ -213,9 +213,9 @@ notchflow/
 ├── apps/
 │   │
 │   ├── macos/
-│   │   ├── NotchFlow/
-│   │   ├── NotchFlowTests/
-│   │   ├── NotchFlowUITests/
+│   │   ├── DynamicNotch/
+│   │   ├── DynamicNotchTests/
+│   │   ├── DynamicNotchUITests/
 │   │   └── project.yml
 │   │
 │   └── api/
@@ -260,10 +260,10 @@ Use feature-based Clean Architecture without creating unnecessary abstraction.
 Target structure:
 
 ```text
-apps/macos/NotchFlow/
+apps/macos/DynamicNotch/
 │
 ├── App/
-│   ├── NotchFlowApp.swift
+│   ├── DynamicNotchApp.swift
 │   ├── AppDelegate.swift
 │   ├── AppEnvironment.swift
 │   └── DependencyContainer.swift
@@ -1230,7 +1230,7 @@ Expanded:
 │                                      │
 │ Implementing ClipboardStore...      │
 │                                      │
-│ project/notchflow                    │
+│ project/dynamicnotch                    │
 │                                      │
 │        Open Session                  │
 └─────────────────────────────────────┘
@@ -1899,7 +1899,7 @@ Optimize for keyboard use.
 ├──────────────────────────────────────┤
 │ ● Codex                            │
 │   Implementing database schema      │
-│   ~/Projects/notchflow              │
+│   ~/Projects/dynamicnotch              │
 ├──────────────────────────────────────┤
 │ ◐ Claude                            │
 │   Waiting for permission            │
@@ -2006,7 +2006,7 @@ Store large image files on disk, not as SQLite blobs.
 Use:
 
 ```text
-Application Support/NotchFlow/
+Application Support/DynamicNotch/
 ```
 
 Structure:
@@ -2489,7 +2489,7 @@ Do not overwrite user configuration.
 README must contain:
 
 ```text
-What is NotchFlow
+What is DynamicNotch
 Screenshots placeholder
 Architecture
 Requirements
@@ -2752,7 +2752,7 @@ Example:
 
 ```text
               ┌───────────────┐
-──────────────┤   NotchFlow   ├──────────────
+──────────────┤   DynamicNotch   ├──────────────
               └───────────────┘
 ```
 

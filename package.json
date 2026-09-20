@@ -1,16 +1,16 @@
 {
-  "name": "notchflow",
+  "name": "dynamicnotch",
   "private": true,
   "version": "0.1.0",
   "packageManager": "pnpm@12.4.2",
   "scripts": {
-    "dev:api": "pnpm --filter @notchflow/api dev",
-    "build": "pnpm --filter @notchflow/contracts build && pnpm --filter @notchflow/database build && pnpm --filter @notchflow/api build",
-    "test": "pnpm --filter @notchflow/contracts build && pnpm -r test",
+    "dev:api": "pnpm --filter @dynamicnotch/api dev",
+    "build": "pnpm --filter @dynamicnotch/contracts build && pnpm --filter @dynamicnotch/database build && pnpm --filter @dynamicnotch/api build",
+    "test": "pnpm --filter @dynamicnotch/contracts build && pnpm -r test",
     "lint": "pnpm -r lint",
-    "db:generate": "pnpm --filter @notchflow/database db:generate",
-    "db:migrate": "pnpm --filter @notchflow/database db:migrate",
-    "db:studio": "pnpm --filter @notchflow/database db:studio"
+    "db:generate": "pnpm --filter @dynamicnotch/database db:generate",
+    "db:migrate": "pnpm --filter @dynamicnotch/database db:migrate",
+    "db:studio": "pnpm --filter @dynamicnotch/database db:studio"
   },
   "devDependencies": {
     "prettier": "^3.6.2",

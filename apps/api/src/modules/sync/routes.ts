@@ -1,4 +1,4 @@
-import { syncPullSchema, syncPushSchema } from "@notchflow/contracts";
+import { syncPullSchema, syncPushSchema } from "@dynamicnotch/contracts";
 import type { FastifyInstance } from "fastify";
 import { ok } from "../../shared/response.js";
 

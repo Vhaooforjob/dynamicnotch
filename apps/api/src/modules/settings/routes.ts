@@ -1,4 +1,4 @@
-import { settingsInputSchema } from "@notchflow/contracts";
+import { settingsInputSchema } from "@dynamicnotch/contracts";
 import type { FastifyInstance } from "fastify";
 import { ok } from "../../shared/response.js";
 

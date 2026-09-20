@@ -3,7 +3,12 @@ import type { Env } from "../config/env.js";
 
 export type DatabaseHealth = "connected" | "not_configured" | "unavailable";
 
-export class DatabaseClient {
+export interface DatabaseDependency {
+  health(): Promise<DatabaseHealth>;
+  close(): Promise<void>;
+}
+
+export class DatabaseClient implements DatabaseDependency {
   private readonly pool?: Pool;
 
   constructor(env: Env) {

@@ -1,6 +1,6 @@
 # Architecture
 
-NotchFlow is a local-first native macOS application with an optional cloud API.
+DynamicNotch is a local-first native macOS application with an optional cloud API.
 
 ## Boundaries
 

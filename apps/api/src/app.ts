@@ -1,7 +1,7 @@
 import Fastify from "fastify";
 import { ZodError } from "zod";
 import { env } from "./config/env.js";
-import { DatabaseClient } from "./plugins/database.js";
+import { DatabaseClient, type DatabaseDependency } from "./plugins/database.js";
 import { registerSecurity } from "./plugins/security.js";
 import { registerAuthRoutes } from "./modules/auth/routes.js";
 import { registerBoardRoutes } from "./modules/boards/routes.js";
@@ -11,12 +11,16 @@ import { registerSettingsRoutes } from "./modules/settings/routes.js";
 import { registerSyncRoutes } from "./modules/sync/routes.js";
 import { ApiError, sendError } from "./shared/errors.js";
 
-export async function buildApp() {
+export type BuildAppOptions = {
+  database?: DatabaseDependency;
+};
+
+export async function buildApp(options: BuildAppOptions = {}) {
   const app = Fastify({
     logger: { level: env.LOG_LEVEL },
     bodyLimit: 1024 * 256
   });
-  const database = new DatabaseClient(env);
+  const database = options.database ?? new DatabaseClient(env);
 
   await registerSecurity(app);
   await registerHealthRoutes(app, database);

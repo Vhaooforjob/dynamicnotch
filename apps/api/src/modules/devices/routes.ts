@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { deviceInputSchema } from "@notchflow/contracts";
+import { deviceInputSchema } from "@dynamicnotch/contracts";
 import type { FastifyInstance } from "fastify";
 import { ok } from "../../shared/response.js";
 

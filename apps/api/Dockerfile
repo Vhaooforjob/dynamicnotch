@@ -6,5 +6,5 @@ COPY packages/contracts/package.json packages/contracts/package.json
 RUN corepack enable
 RUN pnpm install --frozen-lockfile=false
 COPY . .
-RUN pnpm --filter @notchflow/api build
+RUN pnpm --filter @dynamicnotch/api build
 CMD ["node", "apps/api/dist/server.js"]

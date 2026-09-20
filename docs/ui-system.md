@@ -1,6 +1,6 @@
 # UI System
 
-NotchFlow is dark-first, compact, keyboard-first, and native.
+DynamicNotch is dark-first, compact, keyboard-first, and native.
 
 Use shared Swift tokens:
 

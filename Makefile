@@ -7,7 +7,7 @@ dev-api:
 	pnpm dev:api
 
 macos:
-	cd apps/macos && xcodegen generate && open NotchFlow.xcodeproj
+	cd apps/macos && xcodegen generate && open DynamicNotch.xcodeproj
 
 test:
 	./scripts/test.sh

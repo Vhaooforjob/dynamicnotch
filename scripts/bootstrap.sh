@@ -15,7 +15,7 @@ pnpm install
 if command -v xcodegen >/dev/null; then
   (cd apps/macos && xcodegen generate)
 else
-  echo "Install XcodeGen to generate apps/macos/NotchFlow.xcodeproj"
+  echo "Install XcodeGen to generate apps/macos/DynamicNotch.xcodeproj"
 fi
 
 echo "Next: make dev-api and make macos"

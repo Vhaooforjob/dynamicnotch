@@ -1,6 +1,6 @@
-# NotchFlow
+# DynamicNotch
 
-NotchFlow is a local-first macOS productivity app that turns the menu-bar/notch area into a compact command surface for frequent micro-actions. The MVP focuses on a native notch panel and clipboard history.
+DynamicNotch is a local-first macOS productivity app that turns the menu-bar/notch area into a compact command surface for frequent micro-actions. The MVP focuses on a native notch panel and clipboard history.
 
 ## Screenshots
 
