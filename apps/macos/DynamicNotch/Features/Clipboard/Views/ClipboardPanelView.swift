@@ -34,10 +34,14 @@ struct ClipboardPanelView: View {
                     Button(settingsState.text("copyNext")) {
                         copyNextStackItem()
                     }
+                    .buttonStyle(.plain)
+                    .focusable(false)
                     .disabled(copyStackState.items.isEmpty)
                     Button(settingsState.text("clearStack")) {
                         copyStackState.clear()
                     }
+                    .buttonStyle(.plain)
+                    .focusable(false)
                     .disabled(copyStackState.items.isEmpty)
                 }
             }
@@ -49,6 +53,7 @@ struct ClipboardPanelView: View {
                     NFPill(title: settingsState.text("all"), isSelected: state.selectedBoardID == nil)
                 }
                 .buttonStyle(.plain)
+                .focusable(false)
                 ForEach(state.boards) { board in
                     Button {
                         state.selectedBoardID = board.id
@@ -57,6 +62,7 @@ struct ClipboardPanelView: View {
                         NFPill(title: board.name, isSelected: state.selectedBoardID == board.id)
                     }
                     .buttonStyle(.plain)
+                    .focusable(false)
                     .contextMenu {
                         Button(settingsState.text("rename")) {
                             beginRenaming(board)
@@ -75,6 +81,7 @@ struct ClipboardPanelView: View {
                     Image(systemName: "plus.circle")
                 }
                 .buttonStyle(.plain)
+                .focusable(false)
                 .accessibilityLabel(settingsState.text("newBoard"))
                 if let selectedBoard = state.selectedBoard {
                     Button {
@@ -83,6 +90,7 @@ struct ClipboardPanelView: View {
                         Image(systemName: "pencil")
                     }
                     .buttonStyle(.plain)
+                    .focusable(false)
                     .accessibilityLabel(settingsState.text("renameBoard"))
 
                     Button(role: .destructive) {
@@ -91,6 +99,7 @@ struct ClipboardPanelView: View {
                         Image(systemName: "trash")
                     }
                     .buttonStyle(.plain)
+                    .focusable(false)
                     .accessibilityLabel(settingsState.text("deleteBoard"))
                 }
                 Spacer()
@@ -111,6 +120,7 @@ struct ClipboardPanelView: View {
                                 ClipboardRow(item: item)
                             }
                             .buttonStyle(.plain)
+                            .focusable(false)
                             .contextMenu {
                                 Button(settingsState.text("copy")) {
                                     ClipboardLocalStore.copyToPasteboard(item)
@@ -160,6 +170,7 @@ struct ClipboardPanelView: View {
             NFPill(title: title, isSelected: state.selectedType == type)
         }
         .buttonStyle(.plain)
+        .focusable(false)
     }
 
     private func defaultBoardName() -> String {

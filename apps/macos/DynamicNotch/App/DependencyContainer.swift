@@ -56,4 +56,12 @@ final class DependencyContainer {
         localStore.clearItems()
         clipboardState.items = localStore.fetchItems(boardID: clipboardState.selectedBoardID)
     }
+
+    func showCompactNotch() {
+        notchController.showCompact()
+    }
+
+    func hideNotchForSettings() {
+        notchController.hideForSettings()
+    }
 }

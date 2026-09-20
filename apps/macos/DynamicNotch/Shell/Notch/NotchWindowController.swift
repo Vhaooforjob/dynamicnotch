@@ -54,6 +54,24 @@ final class NotchWindowController: NSObject {
         resizeForState(animated: true)
     }
 
+    func close() {
+        notchState.presentation = .compact
+        notchState.selectedPanel = .quickPanel
+        panel?.orderOut(nil)
+    }
+
+    func hideForSettings() {
+        notchState.presentation = .compact
+        notchState.selectedPanel = .quickPanel
+        panel?.orderOut(nil)
+    }
+
+    func showCompact() {
+        notchState.presentation = .compact
+        notchState.selectedPanel = .quickPanel
+        show()
+    }
+
     func stop() {
         if let localMouseDownMonitor {
             NSEvent.removeMonitor(localMouseDownMonitor)
@@ -82,13 +100,18 @@ final class NotchWindowController: NSObject {
             backing: .buffered,
             defer: false
         )
-        panel.contentView = NSHostingView(rootView: view)
+        let hostingView = NSHostingView(rootView: view)
+        hostingView.wantsLayer = true
+        hostingView.layer?.backgroundColor = NSColor.clear.cgColor
+        hostingView.layer?.masksToBounds = false
+        panel.contentView = hostingView
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.level = .statusBar
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.hidesOnDeactivate = false
-        panel.hasShadow = true
+        panel.hasShadow = false
+        panel.ignoresMouseEvents = false
         return panel
     }
 
@@ -142,15 +165,51 @@ final class NotchWindowController: NSObject {
 
     private func frameForCurrentState() -> NSRect {
         let screen = NSScreen.main ?? NSScreen.screens.first
-        let screenFrame = screen?.visibleFrame ?? .zero
-        let size = notchState.presentation == .expanded
-            ? NSSize(width: NFLayout.expandedWidth, height: NFLayout.expandedHeight)
-            : NSSize(width: NFLayout.compactWidth, height: NFLayout.compactHeight)
+        let screenFrame = screen?.frame ?? .zero
+        let size = contentSize(for: screen)
+        let topOffset = notchState.presentation == .expanded
+            ? expandedTopOffset(for: screen)
+            : 0
         return NSRect(
             x: screenFrame.midX - size.width / 2,
-            y: screenFrame.maxY - size.height - 6,
+            y: screenFrame.maxY - size.height - topOffset,
             width: size.width,
             height: size.height
         )
     }
+
+    private func expandedTopOffset(for screen: NSScreen?) -> CGFloat {
+        guard let screen else { return 40 }
+        let menuBarInset = screen.frame.maxY - screen.visibleFrame.maxY
+        return max(menuBarInset, screen.safeAreaInsets.top, 34) + 4
+    }
+
+    private func contentSize(for screen: NSScreen?) -> NSSize {
+        guard notchState.presentation == .expanded else {
+            return compactSize(for: screen)
+        }
+
+        let height = notchState.selectedPanel == .quickPanel
+            ? NFLayout.quickPanelHeight
+            : NFLayout.detailPanelHeight
+        return NSSize(width: NFLayout.expandedWidth, height: height)
+    }
+
+    private func compactSize(for screen: NSScreen?) -> NSSize {
+        let measuredNotchWidth = notchWidth(for: screen)
+        return NSSize(
+            width: max(NFLayout.compactWidth, measuredNotchWidth + 48),
+            height: NFLayout.compactHeight
+        )
+    }
+
+    private func notchWidth(for screen: NSScreen?) -> CGFloat {
+        guard let screen,
+              let leftArea = screen.auxiliaryTopLeftArea,
+              let rightArea = screen.auxiliaryTopRightArea
+        else { return 0 }
+
+        return max(0, rightArea.minX - leftArea.maxX)
+    }
+
 }

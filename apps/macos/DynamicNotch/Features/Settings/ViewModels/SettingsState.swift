@@ -23,6 +23,8 @@ enum AppearanceMode: String, CaseIterable, Identifiable {
 @MainActor
 final class SettingsState: ObservableObject {
     @Published var launchAtLogin = false
+    @Published var showInMenuBar = true
+    @Published var startMinimized = false
     @Published var appearanceMode: AppearanceMode = .system {
         didSet {
             userDefaults.set(appearanceMode.rawValue, forKey: Self.appearanceModeKey)

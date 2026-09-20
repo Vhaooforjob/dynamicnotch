@@ -11,8 +11,20 @@ enum NotchPresentationState: String {
     case modal
 }
 
+enum NotchPanel: String, CaseIterable, Identifiable {
+    case quickPanel
+    case clipboard
+    case capture
+    case media
+    case calendar
+    case agents
+
+    var id: String { rawValue }
+}
+
 @MainActor
 final class NotchState: ObservableObject {
     @Published var presentation: NotchPresentationState = .idle
     @Published var isPinned = false
+    @Published var selectedPanel: NotchPanel = .quickPanel
 }

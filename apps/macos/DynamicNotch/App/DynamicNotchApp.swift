@@ -11,7 +11,7 @@ struct DynamicNotchApp: App {
                 onClearClipboard: appDelegate.container.clearClipboardHistory
             )
                 .preferredColorScheme(appDelegate.container.settingsState.appearanceMode.colorScheme)
-                .frame(width: 680, height: 520)
+                .frame(width: 760, height: 520)
         }
     }
 }

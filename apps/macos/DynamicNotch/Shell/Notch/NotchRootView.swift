@@ -13,6 +13,7 @@ struct NotchRootView: View {
         VStack(spacing: 0) {
             if notchState.presentation == .expanded {
                 ExpandedNotchView(
+                    notchState: notchState,
                     clipboardState: clipboardState,
                     copyStackState: copyStackState,
                     settingsState: settingsState,
@@ -31,20 +32,57 @@ struct NotchRootView: View {
             }
         }
         .animation(NFAnimation.content, value: notchState.presentation)
-        .background(panelBackground, in: RoundedRectangle(cornerRadius: NFRadius.lg, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: NFRadius.lg, style: .continuous)
-                .stroke(panelStroke, lineWidth: 1)
-        )
+        .background(panelBackground, in: panelShape)
+        .clipShape(panelShape)
+        .contentShape(panelShape)
         .preferredColorScheme(settingsState.appearanceMode.colorScheme)
     }
 
     private var panelBackground: Color {
-        colorScheme == .light ? .white : Color(nsColor: .windowBackgroundColor)
+        colorScheme == .light ? NFTheme.lightBackground : NFTheme.darkBackground.opacity(0.96)
     }
 
-    private var panelStroke: Color {
-        colorScheme == .light ? Color.black.opacity(0.12) : Color.white.opacity(0.14)
+    private var panelShape: NFPanelShape {
+        if notchState.presentation == .expanded {
+            return NFPanelShape(topRadius: NFRadius.xl, bottomRadius: NFRadius.xl)
+        }
+        return NFPanelShape(topRadius: 0, bottomRadius: NFRadius.xl)
+    }
+}
+
+private struct NFPanelShape: Shape {
+    let topRadius: CGFloat
+    let bottomRadius: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        let top = min(topRadius, rect.width / 2, rect.height / 2)
+        let bottom = min(bottomRadius, rect.width / 2, rect.height / 2)
+        var path = Path()
+
+        path.move(to: CGPoint(x: rect.minX + top, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX - top, y: rect.minY))
+        path.addQuadCurve(
+            to: CGPoint(x: rect.maxX, y: rect.minY + top),
+            control: CGPoint(x: rect.maxX, y: rect.minY)
+        )
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - bottom))
+        path.addQuadCurve(
+            to: CGPoint(x: rect.maxX - bottom, y: rect.maxY),
+            control: CGPoint(x: rect.maxX, y: rect.maxY)
+        )
+        path.addLine(to: CGPoint(x: rect.minX + bottom, y: rect.maxY))
+        path.addQuadCurve(
+            to: CGPoint(x: rect.minX, y: rect.maxY - bottom),
+            control: CGPoint(x: rect.minX, y: rect.maxY)
+        )
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + top))
+        path.addQuadCurve(
+            to: CGPoint(x: rect.minX + top, y: rect.minY),
+            control: CGPoint(x: rect.minX, y: rect.minY)
+        )
+        path.closeSubpath()
+
+        return path
     }
 }
 
@@ -53,10 +91,8 @@ private struct CompactNotchView: View {
 
     var body: some View {
         HStack(spacing: NFSpacing.sm) {
-            RoundedRectangle(cornerRadius: 2, style: .continuous)
-                .fill(Color.primary.opacity(0.7))
-                .frame(width: 22, height: 3)
-            Text("DynamicNotch")
+            Image(systemName: "doc.on.doc")
+                .foregroundStyle(NFTheme.accent)
             Spacer()
             Text("\(count)")
                 .foregroundStyle(.secondary)
@@ -64,38 +100,273 @@ private struct CompactNotchView: View {
         .font(NFTypography.body)
         .padding(.horizontal, NFSpacing.lg)
         .frame(width: NFLayout.compactWidth, height: NFLayout.compactHeight)
-        .accessibilityLabel("DynamicNotch clipboard panel")
+        .accessibilityLabel("Clipboard panel")
     }
 }
 
 private struct ExpandedNotchView: View {
+    @ObservedObject var notchState: NotchState
     @ObservedObject var clipboardState: ClipboardState
     @ObservedObject var copyStackState: CopyStackState
     @ObservedObject var settingsState: SettingsState
     let localStore: ClipboardLocalStore
 
     var body: some View {
-        VStack(spacing: NFSpacing.md) {
-            HStack {
-                Text(settingsState.text("clipboard"))
-                    .font(NFTypography.title)
-                Spacer()
-                Button {
-                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-                } label: {
-                    Image(systemName: "gearshape")
+        VStack(spacing: NFSpacing.lg) {
+            switch notchState.selectedPanel {
+            case .quickPanel:
+                QuickPanelView(
+                    notchState: notchState,
+                    clipboardState: clipboardState,
+                    settingsState: settingsState
+                )
+            case .clipboard:
+                VStack(spacing: NFSpacing.md) {
+                    PanelToolbar(
+                        title: settingsState.text("clipboard"),
+                        onBack: { notchState.selectedPanel = .quickPanel },
+                        settingsState: settingsState
+                    )
+                    ClipboardPanelView(
+                        state: clipboardState,
+                        copyStackState: copyStackState,
+                        settingsState: settingsState,
+                        localStore: localStore
+                    )
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(settingsState.text("openSettings"))
+            case .capture, .media, .calendar, .agents:
+                FuturePanelView(
+                    panel: notchState.selectedPanel,
+                    settingsState: settingsState,
+                    onBack: { notchState.selectedPanel = .quickPanel }
+                )
             }
-            ClipboardPanelView(
-                state: clipboardState,
-                copyStackState: copyStackState,
-                settingsState: settingsState,
-                localStore: localStore
-            )
         }
         .padding(NFSpacing.lg)
-        .frame(width: NFLayout.expandedWidth, height: NFLayout.expandedHeight)
+        .frame(width: NFLayout.expandedWidth, height: expandedHeight)
+    }
+
+    private var expandedHeight: CGFloat {
+        notchState.selectedPanel == .quickPanel ? NFLayout.quickPanelHeight : NFLayout.detailPanelHeight
+    }
+}
+
+private struct QuickPanelView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var query = ""
+    @ObservedObject var notchState: NotchState
+    @ObservedObject var clipboardState: ClipboardState
+    @ObservedObject var settingsState: SettingsState
+
+    private var actions: [QuickAction] {
+        [
+            QuickAction(id: "clipboard", title: settingsState.text("clipboard"), icon: "doc.on.clipboard", color: NFTheme.accentBlue, destination: .panel(.clipboard), isEnabled: true),
+            QuickAction(id: "screenshot", title: settingsState.text("screenshot"), icon: "viewfinder", color: NFTheme.accent, destination: .panel(.capture), isEnabled: FeatureFlags.smartCapture || FeatureFlags.scrollingScreenshot),
+            QuickAction(id: "aiOcr", title: settingsState.text("aiOcr"), icon: "viewfinder.circle", color: NFTheme.accent, destination: .panel(.agents), isEnabled: FeatureFlags.agentApproval),
+            QuickAction(id: "translate", title: settingsState.text("translate"), icon: "character.book.closed", color: NFTheme.accentBlue, destination: .panel(.capture), isEnabled: FeatureFlags.advancedTranslation),
+            QuickAction(id: "search", title: settingsState.text("search"), icon: "magnifyingglass", color: NFTheme.accent, destination: .none, isEnabled: true),
+            QuickAction(id: "calendar", title: settingsState.text("calendar"), icon: "calendar", color: NFTheme.warning, destination: .panel(.calendar), isEnabled: false),
+            QuickAction(id: "media", title: settingsState.text("media"), icon: "music.note", color: NFTheme.success, destination: .panel(.media), isEnabled: FeatureFlags.lyrics),
+            QuickAction(id: "settings", title: settingsState.text("settingsShort"), icon: "gearshape", color: .primary, destination: .settings, isEnabled: true)
+        ]
+    }
+
+    var body: some View {
+        VStack(spacing: NFSpacing.md) {
+            VStack(spacing: NFSpacing.xs) {
+                Text(settingsState.text("quickPanel"))
+                    .font(.system(size: 18, weight: .semibold))
+                Text(settingsState.text("quickPanelSubtitle"))
+                    .font(NFTypography.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: NFSpacing.md) {
+                ForEach(actions) { action in
+                    switch action.destination {
+                    case .settings:
+                        SettingsLink {
+                            QuickActionTileContent(action: action)
+                                .contentShape(Rectangle())
+                                .opacity(action.isEnabled ? 1 : 0.55)
+                        }
+                        .buttonStyle(.plain)
+                        .focusable(false)
+                    case .panel, .none:
+                        QuickActionTile(action: action) {
+                            handle(action)
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func handle(_ action: QuickAction) {
+        guard action.isEnabled else { return }
+        switch action.destination {
+        case .panel(let panel):
+            withAnimation(NFAnimation.content) {
+                notchState.selectedPanel = panel
+            }
+        case .settings:
+            break
+        case .none:
+            break
+        }
+    }
+}
+
+private struct QuickAction: Identifiable {
+    let id: String
+    let title: String
+    let icon: String
+    let color: Color
+    let destination: QuickActionDestination
+    let isEnabled: Bool
+}
+
+private enum QuickActionDestination {
+    case panel(NotchPanel)
+    case settings
+    case none
+}
+
+private struct QuickActionTile: View {
+    let action: QuickAction
+    let onSelect: () -> Void
+
+    var body: some View {
+        Button(action: onSelect) {
+            QuickActionTileContent(action: action)
+                .contentShape(Rectangle())
+                .opacity(action.isEnabled ? 1 : 0.55)
+        }
+        .buttonStyle(.plain)
+        .focusable(false)
+    }
+}
+
+private struct QuickActionTileContent: View {
+    @Environment(\.colorScheme) private var colorScheme
+    let action: QuickAction
+
+    var body: some View {
+        VStack(spacing: NFSpacing.sm) {
+            ZStack(alignment: .topTrailing) {
+                RoundedRectangle(cornerRadius: NFRadius.md, style: .continuous)
+                    .fill(tileBackground)
+                Image(systemName: action.icon)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(action.color)
+                if !action.isEnabled {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(6)
+                }
+            }
+            .frame(width: 58, height: 58)
+
+            Text(action.title)
+                .font(NFTypography.caption)
+                .foregroundStyle(action.isEnabled ? Color.primary : Color.secondary)
+                .lineLimit(1)
+                .frame(width: 72)
+        }
+    }
+
+    private var tileBackground: Color {
+        colorScheme == .light ? .white : Color.white.opacity(0.08)
+    }
+}
+
+private struct PanelToolbar: View {
+    let title: String
+    let onBack: () -> Void
+    @ObservedObject var settingsState: SettingsState
+
+    var body: some View {
+        HStack {
+            Button(action: onBack) {
+                HStack(spacing: NFSpacing.sm) {
+                Image(systemName: "chevron.left")
+                    Text(title)
+                        .font(NFTypography.title)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .focusable(false)
+            Spacer()
+            SettingsLink {
+                Image(systemName: "gearshape")
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .focusable(false)
+            .accessibilityLabel(settingsState.text("openSettings"))
+        }
+    }
+}
+
+private struct FuturePanelView: View {
+    let panel: NotchPanel
+    @ObservedObject var settingsState: SettingsState
+    let onBack: () -> Void
+
+    var body: some View {
+        VStack(spacing: NFSpacing.md) {
+            PanelToolbar(title: title, onBack: onBack, settingsState: settingsState)
+            Spacer()
+            NFIconTile(systemName: icon, color: NFTheme.accent)
+                .scaleEffect(1.5)
+            Text(title)
+                .font(NFTypography.title)
+            Text(settingsState.text("flaggedFeature"))
+                .font(NFTypography.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 260)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var title: String {
+        switch panel {
+        case .quickPanel:
+            settingsState.text("quickPanel")
+        case .clipboard:
+            settingsState.text("clipboard")
+        case .capture:
+            settingsState.text("capture")
+        case .media:
+            settingsState.text("media")
+        case .calendar:
+            settingsState.text("calendar")
+        case .agents:
+            settingsState.text("aiAgents")
+        }
+    }
+
+    private var icon: String {
+        switch panel {
+        case .quickPanel:
+            "sparkles"
+        case .clipboard:
+            "doc.on.clipboard"
+        case .capture:
+            "viewfinder"
+        case .media:
+            "play.circle.fill"
+        case .calendar:
+            "calendar"
+        case .agents:
+            "cpu"
+        }
     }
 }

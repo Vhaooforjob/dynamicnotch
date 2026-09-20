@@ -9,6 +9,27 @@ enum ClipboardItemType: String, CaseIterable, Codable {
     case color
     case code
     case unknown
+
+    var symbolName: String {
+        switch self {
+        case .text:
+            "text.alignleft"
+        case .richText:
+            "textformat"
+        case .url:
+            "link"
+        case .image:
+            "photo"
+        case .file:
+            "doc"
+        case .color:
+            "paintpalette"
+        case .code:
+            "chevron.left.forwardslash.chevron.right"
+        case .unknown:
+            "questionmark.square"
+        }
+    }
 }
 
 struct ClipboardItem: Identifiable, Equatable, Codable {

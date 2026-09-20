@@ -10,8 +10,9 @@ enum NFSpacing {
 
 enum NFRadius {
     static let sm: CGFloat = 8
-    static let md: CGFloat = 14
-    static let lg: CGFloat = 22
+    static let md: CGFloat = 12
+    static let lg: CGFloat = 16
+    static let xl: CGFloat = 22
 }
 
 enum NFTypography {
@@ -26,8 +27,24 @@ enum NFAnimation {
 }
 
 enum NFLayout {
-    static let compactWidth: CGFloat = 320
-    static let expandedWidth: CGFloat = 560
-    static let compactHeight: CGFloat = 44
-    static let expandedHeight: CGFloat = 430
+    static let compactWidth: CGFloat = 280
+    static let expandedWidth: CGFloat = 720
+    static let compactHeight: CGFloat = 43
+    static let quickPanelHeight: CGFloat = 238
+    static let detailPanelHeight: CGFloat = 560
+}
+
+enum NFTheme {
+    static let lightBackground = Color(red: 247 / 255, green: 248 / 255, blue: 252 / 255)
+    static let darkBackground = Color(red: 17 / 255, green: 18 / 255, blue: 23 / 255)
+    static let accent = Color(red: 108 / 255, green: 99 / 255, blue: 255 / 255)
+    static let accentBlue = Color(red: 64 / 255, green: 140 / 255, blue: 255 / 255)
+    static let success = Color(red: 52 / 255, green: 199 / 255, blue: 89 / 255)
+    static let warning = Color(red: 255 / 255, green: 159 / 255, blue: 10 / 255)
+    static let danger = Color(red: 255 / 255, green: 69 / 255, blue: 58 / 255)
+}
+
+enum NFShadow {
+    static let panel = Color.black.opacity(0.24)
+    static let subtle = Color.black.opacity(0.12)
 }
