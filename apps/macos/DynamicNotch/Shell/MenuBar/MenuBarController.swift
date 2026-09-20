@@ -15,4 +15,8 @@ final class MenuBarController {
     @objc private func toggle() {
         notchController?.toggleExpanded()
     }
+
+    func setVisible(_ isVisible: Bool) {
+        item.isVisible = isVisible
+    }
 }

@@ -8,6 +8,8 @@ struct NotchRootView: View {
     @ObservedObject var settingsState: SettingsState
     let localStore: ClipboardLocalStore
     let onExpand: () -> Void
+    let onSelectPanel: (NotchPanel) -> Void
+    let onHoverChanged: (Bool) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -17,7 +19,8 @@ struct NotchRootView: View {
                     clipboardState: clipboardState,
                     copyStackState: copyStackState,
                     settingsState: settingsState,
-                    localStore: localStore
+                    localStore: localStore,
+                    onSelectPanel: onSelectPanel
                 )
                 .transition(.scale(scale: 0.97, anchor: .top).combined(with: .opacity))
             } else {
@@ -36,6 +39,7 @@ struct NotchRootView: View {
         .clipShape(panelShape)
         .contentShape(panelShape)
         .preferredColorScheme(settingsState.appearanceMode.colorScheme)
+        .onHover(perform: onHoverChanged)
     }
 
     private var panelBackground: Color {
@@ -110,35 +114,36 @@ private struct ExpandedNotchView: View {
     @ObservedObject var copyStackState: CopyStackState
     @ObservedObject var settingsState: SettingsState
     let localStore: ClipboardLocalStore
+    let onSelectPanel: (NotchPanel) -> Void
 
     var body: some View {
         VStack(spacing: NFSpacing.lg) {
             switch notchState.selectedPanel {
             case .quickPanel:
                 QuickPanelView(
-                    notchState: notchState,
-                    clipboardState: clipboardState,
-                    settingsState: settingsState
+                    settingsState: settingsState,
+                    onSelectPanel: onSelectPanel
                 )
             case .clipboard:
                 VStack(spacing: NFSpacing.md) {
                     PanelToolbar(
                         title: settingsState.text("clipboard"),
-                        onBack: { notchState.selectedPanel = .quickPanel },
+                        onBack: { onSelectPanel(.quickPanel) },
                         settingsState: settingsState
                     )
                     ClipboardPanelView(
                         state: clipboardState,
                         copyStackState: copyStackState,
                         settingsState: settingsState,
-                        localStore: localStore
+                        localStore: localStore,
+                        onBack: { onSelectPanel(.quickPanel) }
                     )
                 }
             case .capture, .media, .calendar, .agents:
                 FuturePanelView(
                     panel: notchState.selectedPanel,
                     settingsState: settingsState,
-                    onBack: { notchState.selectedPanel = .quickPanel }
+                    onBack: { onSelectPanel(.quickPanel) }
                 )
             }
         }
@@ -152,11 +157,8 @@ private struct ExpandedNotchView: View {
 }
 
 private struct QuickPanelView: View {
-    @Environment(\.colorScheme) private var colorScheme
-    @State private var query = ""
-    @ObservedObject var notchState: NotchState
-    @ObservedObject var clipboardState: ClipboardState
     @ObservedObject var settingsState: SettingsState
+    let onSelectPanel: (NotchPanel) -> Void
 
     private var actions: [QuickAction] {
         [
@@ -164,7 +166,7 @@ private struct QuickPanelView: View {
             QuickAction(id: "screenshot", title: settingsState.text("screenshot"), icon: "viewfinder", color: NFTheme.accent, destination: .panel(.capture), isEnabled: FeatureFlags.smartCapture || FeatureFlags.scrollingScreenshot),
             QuickAction(id: "aiOcr", title: settingsState.text("aiOcr"), icon: "viewfinder.circle", color: NFTheme.accent, destination: .panel(.agents), isEnabled: FeatureFlags.agentApproval),
             QuickAction(id: "translate", title: settingsState.text("translate"), icon: "character.book.closed", color: NFTheme.accentBlue, destination: .panel(.capture), isEnabled: FeatureFlags.advancedTranslation),
-            QuickAction(id: "search", title: settingsState.text("search"), icon: "magnifyingglass", color: NFTheme.accent, destination: .none, isEnabled: true),
+            QuickAction(id: "search", title: settingsState.text("search"), icon: "magnifyingglass", color: NFTheme.accent, destination: .panel(.clipboard), isEnabled: true),
             QuickAction(id: "calendar", title: settingsState.text("calendar"), icon: "calendar", color: NFTheme.warning, destination: .panel(.calendar), isEnabled: false),
             QuickAction(id: "media", title: settingsState.text("media"), icon: "music.note", color: NFTheme.success, destination: .panel(.media), isEnabled: FeatureFlags.lyrics),
             QuickAction(id: "settings", title: settingsState.text("settingsShort"), icon: "gearshape", color: .primary, destination: .settings, isEnabled: true)
@@ -183,8 +185,7 @@ private struct QuickPanelView: View {
 
             HStack(spacing: NFSpacing.md) {
                 ForEach(actions) { action in
-                    switch action.destination {
-                    case .settings:
+                    if action.destination == .settings {
                         SettingsLink {
                             QuickActionTileContent(action: action)
                                 .contentShape(Rectangle())
@@ -192,7 +193,8 @@ private struct QuickPanelView: View {
                         }
                         .buttonStyle(.plain)
                         .focusable(false)
-                    case .panel, .none:
+                        .accessibilityLabel(settingsState.text("openSettings"))
+                    } else {
                         QuickActionTile(action: action) {
                             handle(action)
                         }
@@ -209,11 +211,9 @@ private struct QuickPanelView: View {
         switch action.destination {
         case .panel(let panel):
             withAnimation(NFAnimation.content) {
-                notchState.selectedPanel = panel
+                onSelectPanel(panel)
             }
         case .settings:
-            break
-        case .none:
             break
         }
     }
@@ -228,10 +228,9 @@ private struct QuickAction: Identifiable {
     let isEnabled: Bool
 }
 
-private enum QuickActionDestination {
+private enum QuickActionDestination: Equatable {
     case panel(NotchPanel)
     case settings
-    case none
 }
 
 private struct QuickActionTile: View {
@@ -292,7 +291,7 @@ private struct PanelToolbar: View {
         HStack {
             Button(action: onBack) {
                 HStack(spacing: NFSpacing.sm) {
-                Image(systemName: "chevron.left")
+                    Image(systemName: "chevron.left")
                     Text(title)
                         .font(NFTypography.title)
                 }

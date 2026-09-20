@@ -11,7 +11,7 @@ enum NotchPresentationState: String {
     case modal
 }
 
-enum NotchPanel: String, CaseIterable, Identifiable {
+enum NotchPanel: String, CaseIterable, Identifiable, Equatable {
     case quickPanel
     case clipboard
     case capture

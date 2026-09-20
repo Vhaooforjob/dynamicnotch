@@ -8,7 +8,37 @@ final class ClipboardSearchTests: XCTestCase {
         XCTAssertEqual(ClipboardSearchEngine.filter(items: items, query: "@code", selectedType: nil).first?.type, .code)
     }
 
-    private func item(_ text: String, _ type: ClipboardItemType) -> ClipboardItem {
-        ClipboardItem(id: UUID(), type: type, plainText: text, richText: nil, fileURL: nil, imagePath: nil, sourceApplication: "Safari", sourceBundleIdentifier: nil, createdAt: Date(), updatedAt: Date(), isFavorite: false, boardID: nil, contentHash: text, metadata: [:])
+    func testCombinesTypeApplicationBoardAndTextFilters() {
+        let safariItem = item("Swift concurrency guide", .url, sourceApplication: "Safari")
+        let notesItem = item("Swift meeting notes", .text, sourceApplication: "Notes")
+        let boardNames = [safariItem.id: ["Development"], notesItem.id: ["Work"]]
+
+        let result = ClipboardSearchEngine.filter(
+            items: [safariItem, notesItem],
+            query: "@link @app:saf @board:develop swift",
+            selectedType: nil,
+            boardNamesByItemID: boardNames
+        )
+
+        XCTAssertEqual(result.map(\.id), [safariItem.id])
+    }
+
+    func testTypeTokensAreCombinedAsAlternatives() {
+        let items = [item("URL", .url), item("snippet", .code), item("note", .text)]
+        let result = ClipboardSearchEngine.filter(
+            items: items,
+            query: "@link @code",
+            selectedType: nil
+        )
+
+        XCTAssertEqual(Set(result.map(\.type)), [.url, .code])
+    }
+
+    private func item(
+        _ text: String,
+        _ type: ClipboardItemType,
+        sourceApplication: String = "Safari"
+    ) -> ClipboardItem {
+        ClipboardItem(id: UUID(), type: type, plainText: text, richText: nil, fileURL: nil, imagePath: nil, sourceApplication: sourceApplication, sourceBundleIdentifier: nil, createdAt: Date(), updatedAt: Date(), isFavorite: false, boardID: nil, contentHash: text, metadata: [:])
     }
 }

@@ -51,7 +51,7 @@ final class ClipboardLocalStore {
             sql = """
             SELECT id, type, plain_text, source_application, source_bundle_identifier, created_at, updated_at, is_favorite, content_hash
             FROM clipboard_items
-            ORDER BY created_at DESC
+            ORDER BY is_favorite DESC, created_at DESC
             LIMIT ?;
             """
         } else {
@@ -60,7 +60,7 @@ final class ClipboardLocalStore {
             FROM clipboard_items
             INNER JOIN board_items ON board_items.clipboard_item_id = clipboard_items.id
             WHERE board_items.board_id = ?
-            ORDER BY board_items.sort_order ASC, clipboard_items.created_at DESC
+            ORDER BY clipboard_items.is_favorite DESC, board_items.sort_order ASC, clipboard_items.created_at DESC
             LIMIT ?;
             """
         }
@@ -97,7 +97,7 @@ final class ClipboardLocalStore {
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 isFavorite: sqlite3_column_int(statement, 7) == 1,
-                boardID: nil,
+                boardID: boardID,
                 contentHash: hash,
                 metadata: [:]
             ))
@@ -149,15 +149,85 @@ final class ClipboardLocalStore {
         return boards
     }
 
+    func fetchBoardNamesByItemID() -> [UUID: [String]] {
+        let sql = """
+        SELECT board_items.clipboard_item_id, boards.name
+        FROM board_items
+        INNER JOIN boards ON boards.id = board_items.board_id
+        INNER JOIN clipboard_items ON clipboard_items.id = board_items.clipboard_item_id
+        ORDER BY boards.sort_order ASC;
+        """
+        var statement: OpaquePointer?
+        sqlite3_prepare_v2(database, sql, -1, &statement, nil)
+        defer { sqlite3_finalize(statement) }
+
+        var result: [UUID: [String]] = [:]
+        while sqlite3_step(statement) == SQLITE_ROW {
+            guard let itemIDText = columnText(statement, 0),
+                  let itemID = UUID(uuidString: itemIDText),
+                  let boardName = columnText(statement, 1)
+            else { continue }
+            result[itemID, default: []].append(boardName)
+        }
+        return result
+    }
+
     func addItem(_ item: ClipboardItem, to board: Board) {
-        let sql = "INSERT OR REPLACE INTO board_items(board_id, clipboard_item_id, sort_order) VALUES(?, ?, ?);"
+        let sql = """
+        INSERT OR IGNORE INTO board_items(board_id, clipboard_item_id, sort_order)
+        SELECT ?, ?, ?
+        WHERE EXISTS (SELECT 1 FROM boards WHERE id = ?)
+          AND EXISTS (SELECT 1 FROM clipboard_items WHERE id = ?);
+        """
         var statement: OpaquePointer?
         sqlite3_prepare_v2(database, sql, -1, &statement, nil)
         bind(statement, 1, board.id.uuidString)
         bind(statement, 2, item.id.uuidString)
         sqlite3_bind_int(statement, 3, Int32(nextBoardItemSortOrder(boardID: board.id)))
+        bind(statement, 4, board.id.uuidString)
+        bind(statement, 5, item.id.uuidString)
         sqlite3_step(statement)
         sqlite3_finalize(statement)
+    }
+
+    func removeItem(_ item: ClipboardItem, from board: Board) {
+        var statement: OpaquePointer?
+        sqlite3_prepare_v2(
+            database,
+            "DELETE FROM board_items WHERE board_id = ? AND clipboard_item_id = ?;",
+            -1,
+            &statement,
+            nil
+        )
+        bind(statement, 1, board.id.uuidString)
+        bind(statement, 2, item.id.uuidString)
+        sqlite3_step(statement)
+        sqlite3_finalize(statement)
+    }
+
+    func setFavorite(_ isFavorite: Bool, for item: ClipboardItem) {
+        var statement: OpaquePointer?
+        sqlite3_prepare_v2(database, "UPDATE clipboard_items SET is_favorite = ?, updated_at = ? WHERE id = ?;", -1, &statement, nil)
+        sqlite3_bind_int(statement, 1, isFavorite ? 1 : 0)
+        bind(statement, 2, Self.format(Date()))
+        bind(statement, 3, item.id.uuidString)
+        sqlite3_step(statement)
+        sqlite3_finalize(statement)
+    }
+
+    func deleteItem(_ item: ClipboardItem) {
+        sqlite3_exec(database, "BEGIN IMMEDIATE TRANSACTION;", nil, nil, nil)
+        var statement: OpaquePointer?
+        sqlite3_prepare_v2(database, "DELETE FROM board_items WHERE clipboard_item_id = ?;", -1, &statement, nil)
+        bind(statement, 1, item.id.uuidString)
+        sqlite3_step(statement)
+        sqlite3_finalize(statement)
+
+        sqlite3_prepare_v2(database, "DELETE FROM clipboard_items WHERE id = ?;", -1, &statement, nil)
+        bind(statement, 1, item.id.uuidString)
+        sqlite3_step(statement)
+        sqlite3_finalize(statement)
+        sqlite3_exec(database, "COMMIT;", nil, nil, nil)
     }
 
     func renameBoard(_ board: Board, to name: String) {
@@ -175,6 +245,7 @@ final class ClipboardLocalStore {
     }
 
     func deleteBoard(_ board: Board) {
+        sqlite3_exec(database, "BEGIN IMMEDIATE TRANSACTION;", nil, nil, nil)
         var statement: OpaquePointer?
         sqlite3_prepare_v2(database, "DELETE FROM board_items WHERE board_id = ?;", -1, &statement, nil)
         bind(statement, 1, board.id.uuidString)
@@ -185,6 +256,27 @@ final class ClipboardLocalStore {
         bind(statement, 1, board.id.uuidString)
         sqlite3_step(statement)
         sqlite3_finalize(statement)
+        sqlite3_exec(database, "COMMIT;", nil, nil, nil)
+    }
+
+    func moveBoard(_ board: Board, by offset: Int) {
+        var boards = fetchBoards()
+        guard let sourceIndex = boards.firstIndex(where: { $0.id == board.id }) else { return }
+        let destinationIndex = sourceIndex + offset
+        guard boards.indices.contains(destinationIndex) else { return }
+
+        boards.swapAt(sourceIndex, destinationIndex)
+        sqlite3_exec(database, "BEGIN IMMEDIATE TRANSACTION;", nil, nil, nil)
+        for (sortOrder, board) in boards.enumerated() {
+            var statement: OpaquePointer?
+            sqlite3_prepare_v2(database, "UPDATE boards SET sort_order = ?, updated_at = ? WHERE id = ?;", -1, &statement, nil)
+            sqlite3_bind_int(statement, 1, Int32(sortOrder))
+            bind(statement, 2, Self.format(Date()))
+            bind(statement, 3, board.id.uuidString)
+            sqlite3_step(statement)
+            sqlite3_finalize(statement)
+        }
+        sqlite3_exec(database, "COMMIT;", nil, nil, nil)
     }
 
     func clearItems() {
@@ -215,6 +307,7 @@ final class ClipboardLocalStore {
         sqlite3_bind_int(statement, 1, Int32(policy.maxItems))
         sqlite3_step(statement)
         sqlite3_finalize(statement)
+        removeOrphanedBoardItems()
     }
 
     static func hash(_ text: String) -> String {
@@ -246,6 +339,7 @@ final class ClipboardLocalStore {
         let directory = url.deletingLastPathComponent()
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         sqlite3_open(url.path, &database)
+        sqlite3_exec(database, "PRAGMA foreign_keys = ON;", nil, nil, nil)
     }
 
     private func migrate() {
@@ -271,11 +365,26 @@ final class ClipboardLocalStore {
         CREATE INDEX IF NOT EXISTS clipboard_items_source_bundle_idx ON clipboard_items(source_bundle_identifier);
         CREATE INDEX IF NOT EXISTS clipboard_items_content_hash_idx ON clipboard_items(content_hash);
         CREATE TABLE IF NOT EXISTS boards(id TEXT PRIMARY KEY, name TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
-        CREATE TABLE IF NOT EXISTS board_items(board_id TEXT NOT NULL, clipboard_item_id TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(board_id, clipboard_item_id));
+        CREATE TABLE IF NOT EXISTS board_items(
+          board_id TEXT NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+          clipboard_item_id TEXT NOT NULL REFERENCES clipboard_items(id) ON DELETE CASCADE,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          PRIMARY KEY(board_id, clipboard_item_id)
+        );
+        CREATE INDEX IF NOT EXISTS board_items_clipboard_item_idx ON board_items(clipboard_item_id);
         CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS sync_metadata(key TEXT PRIMARY KEY, value TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS recent_searches(query TEXT PRIMARY KEY, created_at TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS agent_sessions(id TEXT PRIMARY KEY, provider TEXT NOT NULL, title TEXT NOT NULL, status TEXT NOT NULL, updated_at TEXT NOT NULL);
+        """, nil, nil, nil)
+        removeOrphanedBoardItems()
+    }
+
+    private func removeOrphanedBoardItems() {
+        sqlite3_exec(database, """
+        DELETE FROM board_items
+        WHERE board_id NOT IN (SELECT id FROM boards)
+           OR clipboard_item_id NOT IN (SELECT id FROM clipboard_items);
         """, nil, nil, nil)
     }
 

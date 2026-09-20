@@ -35,7 +35,7 @@ enum NFLayout {
 }
 
 enum NFTheme {
-    static let lightBackground = Color(red: 247 / 255, green: 248 / 255, blue: 252 / 255)
+    static let lightBackground = Color.white
     static let darkBackground = Color(red: 17 / 255, green: 18 / 255, blue: 23 / 255)
     static let accent = Color(red: 108 / 255, green: 99 / 255, blue: 255 / 255)
     static let accentBlue = Color(red: 64 / 255, green: 140 / 255, blue: 255 / 255)

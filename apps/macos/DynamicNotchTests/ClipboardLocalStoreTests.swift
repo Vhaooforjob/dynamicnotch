@@ -74,6 +74,46 @@ final class ClipboardLocalStoreTests: XCTestCase {
         XCTAssertTrue(store.fetchItems().first?.plainText?.hasPrefix("new") == true)
     }
 
+    func testFavoritesArePreservedByRetentionAndSortedFirst() {
+        let store = makeStore()
+        let favorite = makeItem("favorite", createdAt: Date(timeIntervalSince1970: 1))
+        store.insertIfNeeded(favorite)
+        store.setFavorite(true, for: favorite)
+        store.insertIfNeeded(makeItem("new", createdAt: Date()))
+
+        store.prune(using: RetentionPolicy(maxAgeHours: nil, maxItems: 1))
+
+        let items = store.fetchItems()
+        XCTAssertEqual(items.count, 2)
+        XCTAssertEqual(items.first?.plainText, "favorite")
+        XCTAssertTrue(items.first?.isFavorite == true)
+    }
+
+    func testRetentionRemovesOrphanedBoardLinks() {
+        let store = makeStore()
+        let board = store.createBoard(named: "Temporary")
+        let sharedID = UUID()
+        let oldItem = makeItem("old", id: sharedID, createdAt: Date(timeIntervalSince1970: 1))
+        store.insertIfNeeded(oldItem)
+        store.addItem(oldItem, to: board)
+
+        store.prune(using: RetentionPolicy(maxAgeHours: 1, maxItems: 50))
+        let replacement = makeItem("replacement", id: sharedID, createdAt: Date())
+        store.insertIfNeeded(replacement)
+
+        XCTAssertTrue(store.fetchItems(boardID: board.id).isEmpty)
+    }
+
+    func testBoardsCanBeReordered() {
+        let store = makeStore()
+        let first = store.createBoard(named: "First")
+        _ = store.createBoard(named: "Second")
+
+        store.moveBoard(first, by: 1)
+
+        XCTAssertEqual(store.fetchBoards().map(\.name), ["Second", "First"])
+    }
+
     private func makeStore() -> ClipboardLocalStore {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
@@ -81,9 +121,9 @@ final class ClipboardLocalStoreTests: XCTestCase {
         return ClipboardLocalStore(databaseURL: url)
     }
 
-    private func makeItem(_ text: String, createdAt: Date) -> ClipboardItem {
+    private func makeItem(_ text: String, id: UUID = UUID(), createdAt: Date) -> ClipboardItem {
         ClipboardItem(
-            id: UUID(),
+            id: id,
             type: .text,
             plainText: text,
             richText: nil,

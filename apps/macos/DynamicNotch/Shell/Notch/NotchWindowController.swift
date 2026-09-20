@@ -11,6 +11,7 @@ final class NotchWindowController: NSObject {
     private var panel: NSPanel?
     private var localMouseDownMonitor: Any?
     private var globalMouseDownMonitor: Any?
+    private var hoverCollapseTask: Task<Void, Never>?
 
     init(
         notchState: NotchState,
@@ -37,21 +38,22 @@ final class NotchWindowController: NSObject {
 
     func toggleExpanded() {
         notchState.presentation = notchState.presentation == .expanded ? .compact : .expanded
-        resizeForState(animated: true)
-        show()
+        showWithoutRepositioning()
+        resizeOnNextRunLoop(animated: true)
     }
 
     func expand() {
         guard notchState.presentation != .expanded else { return }
         notchState.presentation = .expanded
-        resizeForState(animated: true)
-        show()
+        showWithoutRepositioning()
+        resizeOnNextRunLoop(animated: true)
     }
 
     func collapse() {
         guard notchState.presentation == .expanded else { return }
         notchState.presentation = .compact
-        resizeForState(animated: true)
+        notchState.selectedPanel = .quickPanel
+        resizeOnNextRunLoop(animated: true)
     }
 
     func close() {
@@ -81,6 +83,8 @@ final class NotchWindowController: NSObject {
         }
         localMouseDownMonitor = nil
         globalMouseDownMonitor = nil
+        hoverCollapseTask?.cancel()
+        hoverCollapseTask = nil
     }
 
     private func makePanel() -> NSPanel {
@@ -92,18 +96,24 @@ final class NotchWindowController: NSObject {
             localStore: localStore,
             onExpand: { [weak self] in
                 self?.expand()
+            },
+            onSelectPanel: { [weak self] panel in
+                self?.selectPanel(panel)
+            },
+            onHoverChanged: { [weak self] isHovering in
+                self?.handleHover(isHovering)
             }
         )
-        let panel = NSPanel(
+        let panel = InteractiveNotchPanel(
             contentRect: frameForCurrentState(),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
-        let hostingView = NSHostingView(rootView: view)
+        let hostingView = TransparentHostingView(rootView: view)
         hostingView.wantsLayer = true
         hostingView.layer?.backgroundColor = NSColor.clear.cgColor
-        hostingView.layer?.masksToBounds = false
+        hostingView.layer?.masksToBounds = true
         panel.contentView = hostingView
         panel.isOpaque = false
         panel.backgroundColor = .clear
@@ -112,12 +122,54 @@ final class NotchWindowController: NSObject {
         panel.hidesOnDeactivate = false
         panel.hasShadow = false
         panel.ignoresMouseEvents = false
+        panel.animationBehavior = .none
         return panel
+    }
+
+    private func showWithoutRepositioning() {
+        if panel == nil {
+            panel = makePanel()
+            installOutsideClickMonitors()
+        }
+        panel?.orderFrontRegardless()
+    }
+
+    private func resizeOnNextRunLoop(animated: Bool) {
+        Task { @MainActor [weak self] in
+            await Task.yield()
+            self?.resizeForState(animated: animated)
+        }
     }
 
     private func resizeForState(animated: Bool = false) {
         guard let panel else { return }
         setPanelFrame(panel, to: frameForCurrentState(), animated: animated)
+    }
+
+    private func selectPanel(_ selectedPanel: NotchPanel) {
+        guard notchState.selectedPanel != selectedPanel else { return }
+        notchState.selectedPanel = selectedPanel
+        resizeOnNextRunLoop(animated: true)
+    }
+
+    private func handleHover(_ isHovering: Bool) {
+        hoverCollapseTask?.cancel()
+        hoverCollapseTask = nil
+
+        if isHovering {
+            expand()
+            return
+        }
+        guard notchState.presentation == .expanded else { return }
+
+        hoverCollapseTask = Task { @MainActor [weak self] in
+            do {
+                try await Task.sleep(for: .milliseconds(450))
+            } catch {
+                return
+            }
+            self?.collapse()
+        }
     }
 
     private func positionPanel() {
@@ -164,7 +216,7 @@ final class NotchWindowController: NSObject {
     }
 
     private func frameForCurrentState() -> NSRect {
-        let screen = NSScreen.main ?? NSScreen.screens.first
+        let screen = targetScreen()
         let screenFrame = screen?.frame ?? .zero
         let size = contentSize(for: screen)
         let topOffset = notchState.presentation == .expanded
@@ -176,6 +228,14 @@ final class NotchWindowController: NSObject {
             width: size.width,
             height: size.height
         )
+    }
+
+    private func targetScreen() -> NSScreen? {
+        let mouseLocation = NSEvent.mouseLocation
+        return NSScreen.screens.first(where: { $0.frame.contains(mouseLocation) })
+            ?? panel?.screen
+            ?? NSScreen.main
+            ?? NSScreen.screens.first
     }
 
     private func expandedTopOffset(for screen: NSScreen?) -> CGFloat {
@@ -212,4 +272,12 @@ final class NotchWindowController: NSObject {
         return max(0, rightArea.minX - leftArea.maxX)
     }
 
+}
+
+private final class TransparentHostingView<Content: View>: NSHostingView<Content> {
+    override var isOpaque: Bool { false }
+}
+
+private final class InteractiveNotchPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
 }

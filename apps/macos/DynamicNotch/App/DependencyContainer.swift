@@ -25,11 +25,14 @@ final class DependencyContainer {
         settingsState.onPauseClipboardMonitoringChanged = { [weak clipboardMonitor] isPaused in
             clipboardMonitor?.setPaused(isPaused)
         }
+        clipboardMonitor.setPaused(settingsState.pauseClipboardMonitoring)
     }
 
     func start() {
         clipboardState.items = localStore.fetchItems()
         clipboardState.boards = localStore.fetchBoards()
+        clipboardState.boardNamesByItemID = localStore.fetchBoardNamesByItemID()
+        clipboardState.reconcileSelection()
         clipboardMonitor.onItemsChanged = { [weak self] items in
             Task { @MainActor in
                 guard let self else { return }
@@ -38,6 +41,8 @@ final class DependencyContainer {
                 } else {
                     self.clipboardState.items = items
                 }
+                self.clipboardState.boardNamesByItemID = self.localStore.fetchBoardNamesByItemID()
+                self.clipboardState.reconcileSelection()
             }
         }
         clipboardMonitor.start()
@@ -55,6 +60,8 @@ final class DependencyContainer {
     func clearClipboardHistory() {
         localStore.clearItems()
         clipboardState.items = localStore.fetchItems(boardID: clipboardState.selectedBoardID)
+        clipboardState.boardNamesByItemID = [:]
+        clipboardState.reconcileSelection()
     }
 
     func showCompactNotch() {

@@ -40,6 +40,7 @@ struct SettingsView: View {
     @ObservedObject var state: SettingsState
     let onClearClipboard: () -> Void
     @State private var selectedSection: SettingsSection = .general
+    @State private var isConfirmingClearClipboard = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -49,6 +50,14 @@ struct SettingsView: View {
         }
         .frame(width: 760, height: 520)
         .background(settingsBackground)
+        .alert(state.text("clearClipboardQuestion"), isPresented: $isConfirmingClearClipboard) {
+            Button(state.text("clearClipboard"), role: .destructive) {
+                onClearClipboard()
+            }
+            Button(state.text("cancel"), role: .cancel) {}
+        } message: {
+            Text(state.text("clearClipboardMessage"))
+        }
     }
 
     private var sidebar: some View {
@@ -107,7 +116,7 @@ struct SettingsView: View {
                         settingsCard {
                             Toggle(state.text("pauseClipboard"), isOn: $state.pauseClipboardMonitoring)
                             Button(state.text("clearClipboard"), role: .destructive) {
-                                onClearClipboard()
+                                isConfirmingClearClipboard = true
                             }
                         }
                     case .sync:
@@ -127,7 +136,7 @@ struct SettingsView: View {
                                     .foregroundStyle(.secondary)
                             }
                             Button(state.text("clearClipboard"), role: .destructive) {
-                                onClearClipboard()
+                                isConfirmingClearClipboard = true
                             }
                         }
                     case .notch, .capture, .translation, .media, .calendar, .agents, .shortcuts, .advanced, .about:

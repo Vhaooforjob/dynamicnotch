@@ -13,5 +13,12 @@ struct DynamicNotchApp: App {
                 .preferredColorScheme(appDelegate.container.settingsState.appearanceMode.colorScheme)
                 .frame(width: 760, height: 520)
         }
+        .commands {
+            CommandGroup(replacing: .appSettings) {
+                SettingsLink {
+                    Text(appDelegate.container.settingsState.text("settingsShort"))
+                }
+            }
+        }
     }
 }

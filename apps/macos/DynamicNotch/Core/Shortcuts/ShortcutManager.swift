@@ -2,21 +2,36 @@ import AppKit
 
 @MainActor
 final class ShortcutManager {
-    private var monitor: Any?
+    private var globalMonitor: Any?
+    private var localMonitor: Any?
 
     func registerDefaultShortcut(action: @escaping () -> Void) {
-        monitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
-            let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-            if flags.contains([.command, .shift]), event.charactersIgnoringModifiers?.lowercased() == "v" {
-                Task { @MainActor in action() }
-            }
+        unregister()
+        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
+            guard Self.isDefaultShortcut(event) else { return }
+            Task { @MainActor in action() }
+        }
+        localMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            guard Self.isDefaultShortcut(event) else { return event }
+            Task { @MainActor in action() }
+            return nil
         }
     }
 
     func unregister() {
-        if let monitor {
-            NSEvent.removeMonitor(monitor)
+        if let globalMonitor {
+            NSEvent.removeMonitor(globalMonitor)
         }
-        monitor = nil
+        if let localMonitor {
+            NSEvent.removeMonitor(localMonitor)
+        }
+        globalMonitor = nil
+        localMonitor = nil
+    }
+
+    private static func isDefaultShortcut(_ event: NSEvent) -> Bool {
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        return flags == [.command, .shift]
+            && event.charactersIgnoringModifiers?.lowercased() == "v"
     }
 }

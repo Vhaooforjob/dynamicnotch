@@ -48,18 +48,28 @@ struct NFPill: View {
 
 struct NFSearchField: View {
     @Environment(\.colorScheme) private var colorScheme
+    @FocusState private var isFocused: Bool
     @Binding var text: String
     let placeholder: String
+    var autoFocus = false
 
     var body: some View {
         HStack {
             Image(systemName: "magnifyingglass")
             TextField(placeholder, text: $text)
                 .textFieldStyle(.plain)
+                .focused($isFocused)
         }
         .padding(.horizontal, NFSpacing.md)
         .padding(.vertical, NFSpacing.sm)
         .background(searchBackground, in: RoundedRectangle(cornerRadius: NFRadius.sm, style: .continuous))
+        .onAppear {
+            guard autoFocus else { return }
+            Task { @MainActor in
+                await Task.yield()
+                isFocused = true
+            }
+        }
     }
 
     private var searchBackground: Color {
