@@ -16,8 +16,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard !isRunningUnitTests else { return }
-        didStart = true
         NSApp.setActivationPolicy(.accessory)
+        DispatchQueue.main.async { [weak self] in
+            self?.startApplication()
+        }
+    }
+
+    private func startApplication() {
+        guard !didStart else { return }
+        didStart = true
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(windowDidBecomeKey(_:)),
@@ -110,7 +117,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         .preferredColorScheme(container.settingsState.appearanceMode.colorScheme)
 
         let contentSize = NSSize(width: 760, height: 520)
-        let hostingView = FixedSizeHostingView(rootView: rootView)
+        let hostingView = NSHostingView(rootView: rootView)
+        hostingView.sizingOptions = []
         hostingView.frame = NSRect(origin: .zero, size: contentSize)
         hostingView.autoresizingMask = [.width, .height]
 
@@ -132,8 +140,4 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
             || NSClassFromString("XCTestCase") != nil
     }
-}
-
-private final class FixedSizeHostingView<Content: View>: NSHostingView<Content> {
-    override var intrinsicContentSize: NSSize { .zero }
 }

@@ -22,7 +22,7 @@ enum NFTypography {
 }
 
 enum NFAnimation {
-    static let panel = Animation.interpolatingSpring(stiffness: 260, damping: 28)
+    static let panel = Animation.spring(response: 0.34, dampingFraction: 0.86)
     static let content = Animation.easeOut(duration: 0.18)
 }
 

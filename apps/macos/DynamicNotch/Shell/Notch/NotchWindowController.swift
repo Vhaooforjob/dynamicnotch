@@ -31,29 +31,33 @@ final class NotchWindowController: NSObject {
         if panel == nil {
             panel = makePanel()
             installOutsideClickMonitors()
+        } else {
+            positionPanel()
         }
-        positionPanel()
         panel?.orderFrontRegardless()
     }
 
     func toggleExpanded() {
+        let anchorFrame = visiblePanelFrame
         notchState.presentation = notchState.presentation == .expanded ? .compact : .expanded
         showWithoutRepositioning()
-        resizeOnNextRunLoop(animated: true)
+        resizeOnNextRunLoop(animated: true, anchoredTo: anchorFrame)
     }
 
     func expand() {
         guard notchState.presentation != .expanded else { return }
+        let anchorFrame = visiblePanelFrame
         notchState.presentation = .expanded
         showWithoutRepositioning()
-        resizeOnNextRunLoop(animated: true)
+        resizeOnNextRunLoop(animated: true, anchoredTo: anchorFrame)
     }
 
     func collapse() {
         guard notchState.presentation == .expanded else { return }
+        let anchorFrame = visiblePanelFrame
         notchState.presentation = .compact
         notchState.selectedPanel = .quickPanel
-        resizeOnNextRunLoop(animated: true)
+        resizeOnNextRunLoop(animated: true, anchoredTo: anchorFrame)
     }
 
     func close() {
@@ -110,7 +114,8 @@ final class NotchWindowController: NSObject {
             backing: .buffered,
             defer: false
         )
-        let hostingView = TransparentHostingView(rootView: view)
+        let hostingView = NSHostingView(rootView: view)
+        hostingView.sizingOptions = []
         hostingView.wantsLayer = true
         hostingView.layer?.backgroundColor = NSColor.clear.cgColor
         hostingView.layer?.masksToBounds = true
@@ -134,22 +139,32 @@ final class NotchWindowController: NSObject {
         panel?.orderFrontRegardless()
     }
 
-    private func resizeOnNextRunLoop(animated: Bool) {
+    private var visiblePanelFrame: NSRect? {
+        guard let panel, panel.isVisible else { return nil }
+        return panel.frame
+    }
+
+    private func resizeOnNextRunLoop(animated: Bool, anchoredTo anchorFrame: NSRect? = nil) {
         Task { @MainActor [weak self] in
             await Task.yield()
-            self?.resizeForState(animated: animated)
+            self?.resizeForState(animated: animated, anchoredTo: anchorFrame)
         }
     }
 
-    private func resizeForState(animated: Bool = false) {
+    private func resizeForState(animated: Bool = false, anchoredTo anchorFrame: NSRect? = nil) {
         guard let panel else { return }
-        setPanelFrame(panel, to: frameForCurrentState(), animated: animated)
+        setPanelFrame(
+            panel,
+            to: frameForCurrentState(anchoredTo: anchorFrame),
+            animated: animated
+        )
     }
 
     private func selectPanel(_ selectedPanel: NotchPanel) {
         guard notchState.selectedPanel != selectedPanel else { return }
+        let anchorFrame = visiblePanelFrame
         notchState.selectedPanel = selectedPanel
-        resizeOnNextRunLoop(animated: true)
+        resizeOnNextRunLoop(animated: true, anchoredTo: anchorFrame)
     }
 
     private func handleHover(_ isHovering: Bool) {
@@ -203,31 +218,43 @@ final class NotchWindowController: NSObject {
 
     private func setPanelFrame(_ panel: NSPanel, to frame: NSRect, animated: Bool) {
         guard animated else {
-            panel.setFrame(frame, display: true, animate: false)
+            panel.setFrame(frame, display: false, animate: false)
+            return
+        }
+
+        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
+            panel.setFrame(frame, display: false, animate: false)
             return
         }
 
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.22
-            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            context.duration = 0.3
+            context.timingFunction = CAMediaTimingFunction(
+                controlPoints: 0.2,
+                0.9,
+                0.2,
+                1
+            )
             context.allowsImplicitAnimation = true
             panel.animator().setFrame(frame, display: true)
         }
     }
 
-    private func frameForCurrentState() -> NSRect {
-        let screen = targetScreen()
+    private func frameForCurrentState(anchoredTo anchorFrame: NSRect? = nil) -> NSRect {
+        let screen = screen(containing: anchorFrame) ?? targetScreen()
         let screenFrame = screen?.frame ?? .zero
         let size = contentSize(for: screen)
-        let topOffset = notchState.presentation == .expanded
-            ? expandedTopOffset(for: screen)
-            : 0
-        return NSRect(
-            x: screenFrame.midX - size.width / 2,
-            y: screenFrame.maxY - size.height - topOffset,
-            width: size.width,
-            height: size.height
+        return NotchFrameCalculator.frame(
+            contentSize: size,
+            screenFrame: screenFrame,
+            anchorFrame: anchorFrame
         )
+    }
+
+    private func screen(containing frame: NSRect?) -> NSScreen? {
+        guard let frame else { return nil }
+        let anchorPoint = CGPoint(x: frame.midX, y: frame.maxY - 1)
+        return NSScreen.screens.first(where: { $0.frame.contains(anchorPoint) })
     }
 
     private func targetScreen() -> NSScreen? {
@@ -236,12 +263,6 @@ final class NotchWindowController: NSObject {
             ?? panel?.screen
             ?? NSScreen.main
             ?? NSScreen.screens.first
-    }
-
-    private func expandedTopOffset(for screen: NSScreen?) -> CGFloat {
-        guard let screen else { return 40 }
-        let menuBarInset = screen.frame.maxY - screen.visibleFrame.maxY
-        return max(menuBarInset, screen.safeAreaInsets.top, 34) + 4
     }
 
     private func contentSize(for screen: NSScreen?) -> NSSize {
@@ -274,9 +295,21 @@ final class NotchWindowController: NSObject {
 
 }
 
-private final class TransparentHostingView<Content: View>: NSHostingView<Content> {
-    override var isOpaque: Bool { false }
-    override var intrinsicContentSize: NSSize { .zero }
+enum NotchFrameCalculator {
+    static func frame(
+        contentSize: NSSize,
+        screenFrame: NSRect,
+        anchorFrame: NSRect?
+    ) -> NSRect {
+        let centerX = anchorFrame?.midX ?? screenFrame.midX
+        let topY = anchorFrame?.maxY ?? screenFrame.maxY
+        return NSRect(
+            x: centerX - contentSize.width / 2,
+            y: topY - contentSize.height,
+            width: contentSize.width,
+            height: contentSize.height
+        )
+    }
 }
 
 private final class InteractiveNotchPanel: NSPanel {

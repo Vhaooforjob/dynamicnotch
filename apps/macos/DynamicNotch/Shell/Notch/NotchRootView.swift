@@ -22,7 +22,10 @@ struct NotchRootView: View {
                     localStore: localStore,
                     onSelectPanel: onSelectPanel
                 )
-                .transition(.scale(scale: 0.97, anchor: .top).combined(with: .opacity))
+                .transition(
+                    .scale(scale: 0.78, anchor: .top)
+                        .combined(with: .opacity)
+                )
             } else {
                 CompactNotchView(count: clipboardState.items.count)
                     .contentShape(Rectangle())
@@ -31,10 +34,13 @@ struct NotchRootView: View {
                             onExpand()
                         }
                     }
-                    .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .top)))
+                    .transition(
+                        .scale(scale: 0.84, anchor: .top)
+                            .combined(with: .opacity)
+                    )
             }
         }
-        .animation(NFAnimation.content, value: notchState.presentation)
+        .animation(NFAnimation.panel, value: notchState.presentation)
         .background(panelBackground, in: panelShape)
         .clipShape(panelShape)
         .contentShape(panelShape)
@@ -47,9 +53,6 @@ struct NotchRootView: View {
     }
 
     private var panelShape: NFPanelShape {
-        if notchState.presentation == .expanded {
-            return NFPanelShape(topRadius: NFRadius.xl, bottomRadius: NFRadius.xl)
-        }
         return NFPanelShape(topRadius: 0, bottomRadius: NFRadius.xl)
     }
 }
