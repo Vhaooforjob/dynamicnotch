@@ -5,6 +5,7 @@ struct NotchRootView: View {
     @ObservedObject var notchState: NotchState
     @ObservedObject var clipboardState: ClipboardState
     @ObservedObject var copyStackState: CopyStackState
+    @ObservedObject var mediaState: MediaState
     @ObservedObject var settingsState: SettingsState
     let localStore: ClipboardLocalStore
     let onExpand: () -> Void
@@ -18,6 +19,7 @@ struct NotchRootView: View {
                     notchState: notchState,
                     clipboardState: clipboardState,
                     copyStackState: copyStackState,
+                    mediaState: mediaState,
                     settingsState: settingsState,
                     localStore: localStore,
                     onSelectPanel: onSelectPanel
@@ -115,6 +117,7 @@ private struct ExpandedNotchView: View {
     @ObservedObject var notchState: NotchState
     @ObservedObject var clipboardState: ClipboardState
     @ObservedObject var copyStackState: CopyStackState
+    @ObservedObject var mediaState: MediaState
     @ObservedObject var settingsState: SettingsState
     let localStore: ClipboardLocalStore
     let onSelectPanel: (NotchPanel) -> Void
@@ -141,7 +144,13 @@ private struct ExpandedNotchView: View {
                         onBack: { onSelectPanel(.quickPanel) }
                     )
                 }
-            case .capture, .media, .calendar, .agents:
+            case .media:
+                MediaPanelView(
+                    state: mediaState,
+                    settingsState: settingsState,
+                    onBack: { onSelectPanel(.quickPanel) }
+                )
+            case .capture, .calendar, .agents:
                 FuturePanelView(
                     panel: notchState.selectedPanel,
                     settingsState: settingsState,
@@ -170,7 +179,7 @@ private struct QuickPanelView: View {
             QuickAction(id: "translate", title: settingsState.text("translate"), icon: "character.book.closed", color: NFTheme.accentBlue, destination: .panel(.capture), isEnabled: FeatureFlags.advancedTranslation),
             QuickAction(id: "search", title: settingsState.text("search"), icon: "magnifyingglass", color: NFTheme.accent, destination: .panel(.clipboard), isEnabled: true),
             QuickAction(id: "calendar", title: settingsState.text("calendar"), icon: "calendar", color: NFTheme.warning, destination: .panel(.calendar), isEnabled: false),
-            QuickAction(id: "media", title: settingsState.text("media"), icon: "music.note", color: NFTheme.success, destination: .panel(.media), isEnabled: FeatureFlags.lyrics)
+            QuickAction(id: "media", title: settingsState.text("media"), icon: "music.note", color: NFTheme.success, destination: .panel(.media), isEnabled: FeatureFlags.audioMixer || FeatureFlags.lyrics)
         ]
     }
 

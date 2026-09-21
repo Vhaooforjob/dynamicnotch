@@ -18,5 +18,7 @@
   <string>15.0</string>
   <key>NSHumanReadableCopyright</key>
   <string>Copyright 2026 DynamicNotch contributors</string>
+  <key>NSAudioCaptureUsageDescription</key>
+  <string>DynamicNotch processes system audio on this Mac to provide per-app volume controls. Audio is never saved or uploaded.</string>
 </dict>
 </plist>

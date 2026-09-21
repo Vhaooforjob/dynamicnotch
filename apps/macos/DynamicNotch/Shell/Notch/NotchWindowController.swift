@@ -6,6 +6,7 @@ final class NotchWindowController: NSObject {
     private let notchState: NotchState
     private let clipboardState: ClipboardState
     private let copyStackState: CopyStackState
+    private let mediaState: MediaState
     private let settingsState: SettingsState
     private let localStore: ClipboardLocalStore
     private var panel: NSPanel?
@@ -17,12 +18,14 @@ final class NotchWindowController: NSObject {
         notchState: NotchState,
         clipboardState: ClipboardState,
         copyStackState: CopyStackState,
+        mediaState: MediaState,
         settingsState: SettingsState,
         localStore: ClipboardLocalStore
     ) {
         self.notchState = notchState
         self.clipboardState = clipboardState
         self.copyStackState = copyStackState
+        self.mediaState = mediaState
         self.settingsState = settingsState
         self.localStore = localStore
     }
@@ -96,6 +99,7 @@ final class NotchWindowController: NSObject {
             notchState: notchState,
             clipboardState: clipboardState,
             copyStackState: copyStackState,
+            mediaState: mediaState,
             settingsState: settingsState,
             localStore: localStore,
             onExpand: { [weak self] in

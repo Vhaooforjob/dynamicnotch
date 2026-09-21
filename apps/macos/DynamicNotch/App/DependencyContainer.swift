@@ -7,6 +7,7 @@ final class DependencyContainer {
     let settingsState = SettingsState()
     let clipboardState = ClipboardState()
     let copyStackState = CopyStackState()
+    let mediaState = MediaState()
     let localStore: ClipboardLocalStore
     let clipboardMonitor: ClipboardMonitorService
     let shortcutManager = ShortcutManager()
@@ -19,6 +20,7 @@ final class DependencyContainer {
             notchState: notchState,
             clipboardState: clipboardState,
             copyStackState: copyStackState,
+            mediaState: mediaState,
             settingsState: settingsState,
             localStore: localStore
         )
@@ -46,6 +48,7 @@ final class DependencyContainer {
             }
         }
         clipboardMonitor.start()
+        mediaState.start()
         shortcutManager.registerDefaultShortcut { [weak self] in
             Task { @MainActor in self?.notchController.toggleExpanded() }
         }
@@ -53,6 +56,7 @@ final class DependencyContainer {
 
     func stop() {
         clipboardMonitor.stop()
+        mediaState.stop()
         shortcutManager.unregister()
         notchController.stop()
     }
